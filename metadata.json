@@ -1,0 +1,7 @@
+{
+  "name": "Remix: Portaria Inteligente - Delta Geração",
+  "description": "Sistema de gestão de acesso para parceiros e colaboradores com integração a planilhas Google e relatórios de permanência automatizados.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
