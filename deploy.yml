@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # Permissão para salvar os arquivos do build
   pages: write
   id-token: write
 
@@ -33,9 +33,6 @@ jobs:
           VITE_SCRIPT_URL: ${{ secrets.VITE_SCRIPT_URL }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           VITE_BASE_PATH: ${{ secrets.VITE_BASE_PATH }}
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
