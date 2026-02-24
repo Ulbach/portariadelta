@@ -2,14 +2,16 @@ import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Carrega as variáveis de ambiente baseadas no modo (dev/prod)
+  // Carrega as variáveis de ambiente (como VITE_BASE_PATH e API_KEY)
   const env = loadEnv(mode, process.cwd(), '');
 
   return {
-    // Configura o caminho base para o GitHub Pages. 
-    // Se VITE_BASE_PATH não existir, usa './' para caminhos relativos.
+    /**
+     * Define o caminho base do projeto.
+     * Importante para o GitHub Pages: se o site estiver em 'ulbach.github.io/portariadelta/',
+     * o base deve ser '/portariadelta/'. O './' torna os caminhos relativos.
+     */
     base: env.VITE_BASE_PATH || './',
 
     plugins: [
@@ -17,7 +19,7 @@ export default defineConfig(({ mode }) => {
     ],
 
     define: {
-      // Define as chaves para que fiquem disponíveis no código via process.env ou import.meta.env
+      // Mapeia as variáveis para o código (acessíveis via process.env)
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.VITE_SHEET_ID': JSON.stringify(env.VITE_SHEET_ID),
       'process.env.VITE_SCRIPT_URL': JSON.stringify(env.VITE_SCRIPT_URL),
@@ -25,16 +27,21 @@ export default defineConfig(({ mode }) => {
 
     resolve: {
       alias: {
-        // Permite usar '@/' como atalho para a raiz do projeto
+        /**
+         * Permite usar o atalho '@' para referenciar a raiz do projeto.
+         * Exemplo: import { Partner } from '@/types';
+         */
         '@': path.resolve(__dirname, '.'),
       }
     },
 
     build: {
-      // Garante que o build seja gerado na pasta 'dist' conforme o seu deploy.yml
+      // Pasta de saída para o deploy conforme configurado no seu deploy.yml
       outDir: 'dist',
-      // Gera sourcemaps para facilitar a depuração, se necessário
+      // Gera ficheiros de mapa para facilitar a correção de erros
       sourcemap: true,
+      // Limpa a pasta dist antes de cada build
+      emptyOutDir: true,
     },
 
     server: {
