@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export const SHEET_ID: string = import.meta.env.VITE_SHEET_ID || '1TUoORRkkQW-DjxNEI1JPxzLLaKNcvgx5UF0YK3WFnL0';
