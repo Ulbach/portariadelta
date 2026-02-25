@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ViewMode, Partner, AttendanceRecord, StayReport } from './types';
 import { ICONS, INITIAL_COMPANIES, DATA_TAB_NAME } from './constants';
