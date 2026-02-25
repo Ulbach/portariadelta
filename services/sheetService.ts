@@ -15,11 +15,22 @@ const generateUID = () => {
 const SYSTEM_KEYWORDS = ['dados', 'reg', 'log', 'pagina', 'sheet', 'planilha', 'resumo', 'config', 'base'];
 
 export async function fetchCompanies(): Promise<string[]> {
-  if (!SCRIPT_URL) return [];
+  if (!SCRIPT_URL) {
+    console.warn("SCRIPT_URL não configurado.");
+    return [];
+  }
   try {
+    console.log("Buscando abas em:", SCRIPT_URL);
     const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}&cb=${Math.random()}`);
-    if (response.ok) {
-      const data = await response.json();
+    if (!response.ok) {
+      console.error(`Erro HTTP ao buscar abas: ${response.status} ${response.statusText}`);
+      return [];
+    }
+    
+    const text = await response.text();
+    
+    try {
+      const data = JSON.parse(text);
       if (data.status === 'success' && data.companies) {
         return (data.companies as string[]).filter(name => {
           const normName = normalize(name);
@@ -27,9 +38,13 @@ export async function fetchCompanies(): Promise<string[]> {
           return !isSystem && name.trim().length > 0;
         });
       }
+    } catch (jsonError) {
+      console.error("A resposta do Apps Script não é um JSON válido. Verifique se o script está publicado como 'Web App' e com acesso para 'Qualquer pessoa'.");
+      console.debug("Início da resposta recebida:", text.substring(0, 200));
+      return [];
     }
   } catch (e) {
-    console.error("Erro ao buscar abas:", e);
+    console.error("Erro ao processar resposta das abas:", e);
   }
   return [];
 }
@@ -39,9 +54,18 @@ export async function fetchSheetCSV(sheetName: string): Promise<string[][]> {
     const timestamp = Date.now();
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName.trim())}&t=${timestamp}`;
     
+    console.log(`Buscando CSV da aba [${sheetName}] em:`, url);
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) throw new Error(`Status: ${response.status}`);
+    
     const text = await response.text();
+    
+    // Se começar com <!DOCTYPE ou <html, provavelmente é uma página de erro ou login do Google
+    if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+      console.error(`Erro ao carregar aba ${sheetName}: A planilha retornou HTML em vez de CSV. Verifique se a planilha está compartilhada como "Qualquer pessoa com o link" ou se o ID [${SHEET_ID}] está correto.`);
+      return [];
+    }
+    
     return parseCSV(text);
   } catch (error) {
     console.error(`Erro ao carregar aba ${sheetName}:`, error);

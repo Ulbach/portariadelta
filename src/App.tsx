@@ -43,7 +43,9 @@ const App: React.FC = () => {
       setError(null);
     } catch (err: any) {
       console.error("Erro na sincronização:", err);
-      if (!silent) setError("Erro ao sincronizar. Verifique a internet.");
+      if (!silent) {
+        setError("Erro ao sincronizar dados. Verifique se a planilha está compartilhada corretamente e se o Apps Script está publicado.");
+      }
     } finally {
       if (!silent) setLoading(false);
     }
