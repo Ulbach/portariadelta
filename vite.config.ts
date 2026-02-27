@@ -3,8 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  // Troque para o nome exato do seu repositório entre barras
-  base: '/portariadelta/', 
+  base: '/portariadelta/', // nome EXATO do repositório
   plugins: [react()],
   resolve: {
     alias: {
