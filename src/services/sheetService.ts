@@ -144,10 +144,26 @@ export function calculateStayReports(records: AttendanceRecord[]): StayReport[] 
 }
 
 /* ======================================================
-   DIÁRIO / RELATÓRIOS (MANTIDOS)
+   🔎 VALIDAÇÃO DE ESTADO (NOVO – CIRÚRGICO)
+====================================================== */
+export function isPartnerInside(
+  records: AttendanceRecord[],
+  partnerName: string
+): boolean {
+  const normalized = normalize(partnerName);
+
+  const last = records
+    .filter(r => normalize(r.partnerName) === normalized)
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+
+  if (!last) return false;
+  return last.type === 'ENTRY';
+}
+
+/* ======================================================
+   DIÁRIO / RELATÓRIOS (mantidos como estão)
 ====================================================== */
 export function calculateDailySummaries(records: AttendanceRecord[]): DailySummary[] {
-  // lógica original preservada
   return [];
 }
 
@@ -170,11 +186,15 @@ export async function appendRecord(
     await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
-      body: JSON.stringify({ name: partner.name, company: partner.company, type, tab: DATA_TAB_NAME })
+      body: JSON.stringify({
+        name: partner.name,
+        company: partner.company,
+        type,
+        tab: DATA_TAB_NAME
+      })
     });
     return true;
   } catch {
     return false;
   }
-  src/services/sheetService.ts
 }
