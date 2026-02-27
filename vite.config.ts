@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  // O ponto garante que os arquivos sejam encontrados em qualquer subpasta do GitHub
+  // Use './' para garantir que os caminhos sejam relativos ao local de hospedagem
   base: './', 
   plugins: [react()],
   resolve: {
@@ -12,7 +12,8 @@ export default defineConfig({
     }
   },
   build: {
-    // Garante que o build limpe a pasta anterior antes de criar uma nova
+    outDir: 'dist',
     emptyOutDir: true,
+    sourcemap: false
   }
 });
