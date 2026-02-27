@@ -23,9 +23,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: |
-          rm -f package-lock.json
-          npm install
+        run: npm install --frozen-lockfile || npm install
 
       - name: Build
         run: npm run build
