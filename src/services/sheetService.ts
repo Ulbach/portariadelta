@@ -43,7 +43,7 @@ export async function fetchSheetCSV(sheetName: string): Promise<string[][]> {
 
 function parseCSV(text: string): string[][] {
   if (!text) return [];
-  // Regex para separar por vírgula, mas ignorar vírgulas dentro de aspas duplas
+  // Regex para separar por vírgula, ignorando vírgulas dentro de aspas
   const regex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
   return text.split(/\r?\n/)
     .map(line => line.split(regex).map(cell => cell.replace(/^"|"$/g, '').trim()))
@@ -64,7 +64,6 @@ export function parseAttendanceRecords(rows: string[][]): AttendanceRecord[] {
 
     const records: AttendanceRecord[] = [];
     
-    // Processamento seguro de datas
     const entryDate = new Date(dataEntrada);
     if (!isNaN(entryDate.getTime())) {
       records.push({
@@ -155,8 +154,6 @@ export function isPartnerInside(
   partnerName: string
 ): boolean {
   const normalized = normalize(partnerName);
-  
-  // Encontra o registro MAIS RECENTE deste parceiro
   const lastRecord = records
     .filter(r => normalize(r.partnerName) === normalized)
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
@@ -165,7 +162,7 @@ export function isPartnerInside(
 }
 
 /* ======================================================
-   RELATÓRIOS (stubs)
+   RELATÓRIOS (stubs mantidos)
 ====================================================== */
 export function calculateDailySummaries(records: AttendanceRecord[]): DailySummary[] {
   return [];
@@ -187,7 +184,7 @@ export async function appendRecord(
 ): Promise<boolean> {
   if (!SCRIPT_URL) return false;
   try {
-    const response = await fetch(SCRIPT_URL, {
+    await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       body: JSON.stringify({
@@ -198,8 +195,7 @@ export async function appendRecord(
       })
     });
     return true;
-  } catch (error) {
-    console.error("Erro ao enviar registro:", error);
+  } catch {
     return false;
   }
 }
