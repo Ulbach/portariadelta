@@ -5,7 +5,7 @@ const normalize = (str: string) =>
   str?.toString().trim().toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '') || '';
 
-// Busca as abas e bloqueia "Dados" de aparecer como empresa
+// 1. Busca as abas e FILTRA a aba "Dados" para não aparecer como empresa
 export async function fetchCompanies(): Promise<string[]> {
   if (!SCRIPT_URL) return [];
   try {
@@ -15,10 +15,12 @@ export async function fetchCompanies(): Promise<string[]> {
       const name = normalize(n);
       return name !== 'dados' && !['config', 'log', 'base'].some(k => name.includes(k));
     });
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
-// LER ABAS DE EMPRESAS: A=Colaboradores, B=Status_C, C=Intervalo
+// 2. Parser das empresas (A=Nome, B=Status, C=Intervalo)
 export function parsePartners(csv: string[][], company: string): Partner[] {
   if (csv.length <= 1) return [];
   return csv.slice(1).map((r, i) => {
@@ -27,14 +29,14 @@ export function parsePartners(csv: string[][], company: string): Partner[] {
     return {
       id: `p-${company}-${i}`,
       name: name,
-      document: r[2] || '', 
+      document: r[2] || '', // Coluna C
       company: company,
-      status: r[1]?.trim() || 'Ativo' // Ativo ou Inativo
+      status: r[1]?.trim() || 'Ativo' // Coluna B
     };
   }).filter(Boolean) as Partner[];
 }
 
-// LER ABA DADOS: A=ID, B=Entrada, C=Nome, D=Status, E=Saída, F=Empresa
+// 3. Parser da aba Dados (A=ID, B=Entrada, C=Nome, D=Status, E=Saída, F=Empresa)
 export function parseAttendanceRecords(rows: string[][]): AttendanceRecord[] {
   if (rows.length <= 1) return [];
   return rows.slice(1).flatMap(row => {
@@ -72,20 +74,33 @@ export function parseAttendanceRecords(rows: string[][]): AttendanceRecord[] {
   }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 }
 
+// Mantendo as funções de cálculo de permanência originais
 export function calculateStayReports(records: AttendanceRecord[]): StayReport[] {
   const sorted = [...records].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   const open: Record<string, AttendanceRecord> = {};
   const result: StayReport[] = [];
+
   sorted.forEach(r => {
     const key = normalize(r.partnerName);
     if (r.type === 'ENTRY') open[key] = r;
     if (r.type === 'EXIT' && open[key]) {
       const e = open[key];
-      result.push({ recordId: e.id, partnerName: e.partnerName, company: e.company, entryTime: e.timestamp, exitTime: r.timestamp, durationMinutes: Math.round((r.timestamp.getTime() - e.timestamp.getTime()) / 60000) });
+      result.push({
+        recordId: e.id,
+        partnerName: e.partnerName,
+        company: e.company,
+        entryTime: e.timestamp,
+        exitTime: r.timestamp,
+        durationMinutes: Math.round((r.timestamp.getTime() - e.timestamp.getTime()) / 60000)
+      });
       delete open[key];
     }
   });
-  Object.values(open).forEach(e => result.push({ recordId: e.id, partnerName: e.partnerName, company: e.company, entryTime: e.timestamp }));
+
+  Object.values(open).forEach(e => 
+    result.push({ recordId: e.id, partnerName: e.partnerName, company: e.company, entryTime: e.timestamp })
+  );
+
   return result.sort((a, b) => b.entryTime.getTime() - a.entryTime.getTime());
 }
 
