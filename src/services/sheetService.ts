@@ -28,13 +28,14 @@ export async function fetchCompanies(): Promise<string[]> {
 }
 
 /* ======================================================
-   CSV
+   CSV - Melhorado para lidar com aspas e vírgulas
 ====================================================== */
 export async function fetchSheetCSV(sheetName: string): Promise<string[][]> {
   try {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
     const res = await fetch(url, { cache: 'no-store' });
-    return parseCSV(await res.text());
+    const text = await res.text();
+    return parseCSV(text);
   } catch {
     return [];
   }
@@ -42,49 +43,52 @@ export async function fetchSheetCSV(sheetName: string): Promise<string[][]> {
 
 function parseCSV(text: string): string[][] {
   if (!text) return [];
+  // Regex para separar por vírgula, mas ignorar vírgulas dentro de aspas duplas
+  const regex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
   return text.split(/\r?\n/)
-    .map(l => l.split(',').map(c => c.replace(/^"|"$/g, '').trim()))
-    .filter(r => r.length > 1);
+    .map(line => line.split(regex).map(cell => cell.replace(/^"|"$/g, '').trim()))
+    .filter(row => row.length >= 2);
 }
 
 /* ======================================================
-   PARSER PRINCIPAL (ALINHADO À SUA PLANILHA)
-   A: ID_Registros
-   B: DataEntrada
-   C: Nome
-   D: Status
-   E: DataSaida
-   F: Empresa
+   PARSER PRINCIPAL
 ====================================================== */
 export function parseAttendanceRecords(rows: string[][]): AttendanceRecord[] {
   if (rows.length <= 1) return [];
 
   return rows.slice(1).flatMap(row => {
-    if (row.length < 6) return [];
+    if (row.length < 5) return [];
 
     const [id, dataEntrada, nome, , dataSaida, empresa] = row;
     if (!nome || !dataEntrada) return [];
 
     const records: AttendanceRecord[] = [];
-
-    records.push({
-      id: id || crypto.randomUUID(),
-      partnerId: '',
-      partnerName: nome.trim(),
-      company: empresa || 'Parceiro',
-      type: 'ENTRY',
-      timestamp: new Date(dataEntrada)
-    });
-
-    if (dataSaida) {
+    
+    // Processamento seguro de datas
+    const entryDate = new Date(dataEntrada);
+    if (!isNaN(entryDate.getTime())) {
       records.push({
-        id: id || crypto.randomUUID(),
+        id: id || `ent-${crypto.randomUUID()}`,
         partnerId: '',
         partnerName: nome.trim(),
         company: empresa || 'Parceiro',
-        type: 'EXIT',
-        timestamp: new Date(dataSaida)
+        type: 'ENTRY',
+        timestamp: entryDate
       });
+    }
+
+    if (dataSaida) {
+      const exitDate = new Date(dataSaida);
+      if (!isNaN(exitDate.getTime())) {
+        records.push({
+          id: id || `sai-${crypto.randomUUID()}`,
+          partnerId: '',
+          partnerName: nome.trim(),
+          company: empresa || 'Parceiro',
+          type: 'EXIT',
+          timestamp: exitDate
+        });
+      }
     }
 
     return records;
@@ -144,24 +148,24 @@ export function calculateStayReports(records: AttendanceRecord[]): StayReport[] 
 }
 
 /* ======================================================
-   🔎 VALIDAÇÃO DE ESTADO (NOVO – CIRÚRGICO)
+   🔎 VALIDAÇÃO DE ESTADO
 ====================================================== */
 export function isPartnerInside(
   records: AttendanceRecord[],
   partnerName: string
 ): boolean {
   const normalized = normalize(partnerName);
-
-  const last = records
+  
+  // Encontra o registro MAIS RECENTE deste parceiro
+  const lastRecord = records
     .filter(r => normalize(r.partnerName) === normalized)
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
 
-  if (!last) return false;
-  return last.type === 'ENTRY';
+  return lastRecord?.type === 'ENTRY';
 }
 
 /* ======================================================
-   DIÁRIO / RELATÓRIOS (mantidos como estão)
+   RELATÓRIOS (stubs)
 ====================================================== */
 export function calculateDailySummaries(records: AttendanceRecord[]): DailySummary[] {
   return [];
@@ -183,7 +187,7 @@ export async function appendRecord(
 ): Promise<boolean> {
   if (!SCRIPT_URL) return false;
   try {
-    await fetch(SCRIPT_URL, {
+    const response = await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       body: JSON.stringify({
@@ -194,7 +198,8 @@ export async function appendRecord(
       })
     });
     return true;
-  } catch {
+  } catch (error) {
+    console.error("Erro ao enviar registro:", error);
     return false;
   }
 }
