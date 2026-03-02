@@ -40,17 +40,14 @@ const App: React.FC = () => {
       setPartners(partnersResults.flat());
 
       const recordsCsv = await sheetService.fetchSheetCSV(DATA_TAB_NAME);
-      const parsedRecords =
-        sheetService.parseAttendanceRecords(recordsCsv);
+      const parsedRecords = sheetService.parseAttendanceRecords(recordsCsv);
 
       setRecords(parsedRecords);
       setError(null);
     } catch (err) {
       console.error('Erro na sincronização:', err);
       if (!silent) {
-        setError(
-          'Erro ao sincronizar dados. Verifique a conexão e as configurações da planilha.'
-        );
+        setError('Erro ao sincronizar dados. Verifique a conexão.');
       }
     } finally {
       if (!silent) setLoading(false);
@@ -71,10 +68,7 @@ const App: React.FC = () => {
     [stayReports]
   );
 
-  const handleRegisterAction = async (
-    partnerName: string,
-    type: 'ENTRY' | 'EXIT'
-  ) => {
+  const handleRegisterAction = async (partnerName: string, type: 'ENTRY' | 'EXIT') => {
     const inside = sheetService.isPartnerInside(records, partnerName);
 
     if (type === 'ENTRY' && inside) {
@@ -91,11 +85,7 @@ const App: React.FC = () => {
 
     setNotifying('Enviando...');
 
-    const p = partners.find(
-      (part) =>
-        part.name.trim().toLowerCase() ===
-        partnerName.trim().toLowerCase()
-    );
+    const p = partners.find(part => part.name.trim().toLowerCase() === partnerName.trim().toLowerCase());
     const company = p?.company || 'Parceiro';
 
     const tempId = 'temp-' + Date.now();
@@ -108,25 +98,20 @@ const App: React.FC = () => {
       timestamp: new Date()
     };
 
-    // UI Otimista: Adiciona à lista antes de confirmar no servidor
     setRecords((prev) => [tempRecord, ...prev]);
 
-    const success = await sheetService.appendRecord(
-      { name: partnerName.trim(), company },
-      type
-    );
+    const success = await sheetService.appendRecord({ name: partnerName.trim(), company }, type);
 
     if (success) {
       setNotifying('Registrado com sucesso!');
       setTimeout(() => {
         setNotifying(null);
-        loadData(true); // Recarga silenciosa para confirmar dados
+        loadData(true);
       }, 3000);
       return true;
     } else {
-      // Reverte a UI em caso de falha
       setRecords((prev) => prev.filter(r => r.id !== tempId));
-      setNotifying('Falha na comunicação.');
+      setNotifying('Falha no envio.');
       setTimeout(() => setNotifying(null), 3000);
       return false;
     }
@@ -167,86 +152,53 @@ const App: React.FC = () => {
         {error ? (
           <div className="p-10 text-center space-y-4 mt-10">
             <p className="text-sm text-slate-500 font-medium">{error}</p>
-            <button
-              onClick={() => loadData()}
-              className="text-xs font-bold text-[#5b806d] uppercase underline tracking-widest"
-            >
+            <button onClick={() => loadData()} className="text-xs font-bold text-[#5b806d] uppercase underline tracking-widest">
               Tentar de novo
             </button>
           </div>
         ) : (
           <>
-            {view === ViewMode.WELCOME && (
-              <Welcome onStart={() => setView(ViewMode.DASHBOARD)} />
-            )}
+            {view === ViewMode.WELCOME && <Welcome onStart={() => setView(ViewMode.DASHBOARD)} />}
             {view === ViewMode.DASHBOARD && (
-              <Dashboard
-                activeCount={activeNow.length}
-                records={records.slice(0, 5)}
-                loading={loading}
-                onRefresh={() => loadData()}
-                onNavigateAction={(t) => {
-                  setRegistrationInitialTab(t);
-                  setView(ViewMode.REGISTRATION);
-                }}
+              <Dashboard 
+                activeCount={activeNow.length} 
+                records={records.slice(0, 5)} 
+                loading={loading} 
+                onRefresh={() => loadData()} 
+                onNavigateAction={(t) => { setRegistrationInitialTab(t); setView(ViewMode.REGISTRATION); }}
               />
             )}
             {view === ViewMode.PARTNERS && (
-              <PartnersList
-                partners={partners}
-                companies={companies}
-                activeReports={stayReports}
-                loading={loading}
-                onQuickRegister={handleRegisterAction}
-                onBack={() => setView(ViewMode.DASHBOARD)}
-              />
+              <PartnersList partners={partners} companies={companies} activeReports={stayReports} loading={loading} onQuickRegister={handleRegisterAction} onBack={() => setView(ViewMode.DASHBOARD)} />
             )}
             {view === ViewMode.REPORTS && (
-              <Reports
-                records={records}
-                loading={loading}
-                onBack={() => setView(ViewMode.DASHBOARD)}
-              />
+              <Reports records={records} loading={loading} onBack={() => setView(ViewMode.DASHBOARD)} />
             )}
             {view === ViewMode.REGISTRATION && (
-              <Registration
-                partners={partners}
-                activeReports={activeNow}
-                onRegistered={() => loadData(true)}
-                onQuickRegister={handleRegisterAction}
-                initialTab={registrationInitialTab}
-                onBack={() => setView(ViewMode.DASHBOARD)}
-              />
+              <Registration partners={partners} activeReports={activeNow} onRegistered={() => loadData(true)} onQuickRegister={handleRegisterAction} initialTab={registrationInitialTab} onBack={() => setView(ViewMode.DASHBOARD)} />
             )}
             {view === ViewMode.RECORDS && (
-              <RecordsList
-                records={records}
-                loading={loading}
-                onRefresh={() => loadData()}
-                onBack={() => setView(ViewMode.DASHBOARD)}
-              />
+              <RecordsList records={records} loading={loading} onRefresh={() => loadData()} onBack={() => setView(ViewMode.DASHBOARD)} />
             )}
           </>
         )}
       </main>
 
-      {/* Menu Inferior Fixo */}
-      {!isWelcome && (
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/80 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-3xl p-2 flex justify-around items-center z-50">
-          <button onClick={() => setView(ViewMode.DASHBOARD)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.DASHBOARD ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
-            {ICONS.HOME}
-          </button>
-          <button onClick={() => setView(ViewMode.PARTNERS)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.PARTNERS ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
-            {ICONS.USERS}
-          </button>
-          <button onClick={() => setView(ViewMode.REGISTRATION)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.REGISTRATION ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
-            {ICONS.PLUS}
-          </button>
-          <button onClick={() => setView(ViewMode.REPORTS)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.REPORTS ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
-            {ICONS.REPORT}
-          </button>
-        </nav>
-      )}
+      {/* ASSINATURA / MENU (Aparece em todas as telas agora) */}
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/80 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-3xl p-2 flex justify-around items-center z-50">
+        <button onClick={() => setView(ViewMode.DASHBOARD)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.DASHBOARD ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+          {ICONS.HOME}
+        </button>
+        <button onClick={() => setView(ViewMode.PARTNERS)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.PARTNERS ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+          {ICONS.USERS}
+        </button>
+        <button onClick={() => setView(ViewMode.REGISTRATION)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.REGISTRATION ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+          {ICONS.PLUS}
+        </button>
+        <button onClick={() => setView(ViewMode.REPORTS)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.REPORTS ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+          {ICONS.REPORT}
+        </button>
+      </nav>
     </div>
   );
 };
