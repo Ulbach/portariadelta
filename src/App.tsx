@@ -49,7 +49,7 @@ const App: React.FC = () => {
       console.error('Erro na sincronização:', err);
       if (!silent) {
         setError(
-          'Erro ao sincronizar dados. Verifique se a planilha está compartilhada corretamente e se o Apps Script está publicado.'
+          'Erro ao sincronizar dados. Verifique a conexão e as configurações da planilha.'
         );
       }
     } finally {
@@ -71,9 +71,6 @@ const App: React.FC = () => {
     [stayReports]
   );
 
-  /* =====================================================
-     🔐 REGRA DE NEGÓCIO – VALIDAÇÃO CIRÚRGICA
-  ===================================================== */
   const handleRegisterAction = async (
     partnerName: string,
     type: 'ENTRY' | 'EXIT'
@@ -101,8 +98,9 @@ const App: React.FC = () => {
     );
     const company = p?.company || 'Parceiro';
 
+    const tempId = 'temp-' + Date.now();
     const tempRecord: AttendanceRecord = {
-      id: 'temp-' + Date.now(),
+      id: tempId,
       partnerId: '',
       partnerName,
       company,
@@ -110,21 +108,25 @@ const App: React.FC = () => {
       timestamp: new Date()
     };
 
+    // UI Otimista: Adiciona à lista antes de confirmar no servidor
+    setRecords((prev) => [tempRecord, ...prev]);
+
     const success = await sheetService.appendRecord(
       { name: partnerName.trim(), company },
       type
     );
 
     if (success) {
-      setRecords((prev) => [tempRecord, ...prev]);
-      setNotifying('Registrado na nuvem!');
+      setNotifying('Registrado com sucesso!');
       setTimeout(() => {
         setNotifying(null);
-        loadData(true);
-      }, 7000);
+        loadData(true); // Recarga silenciosa para confirmar dados
+      }, 3000);
       return true;
     } else {
-      setNotifying('Falha no envio.');
+      // Reverte a UI em caso de falha
+      setRecords((prev) => prev.filter(r => r.id !== tempId));
+      setNotifying('Falha na comunicação.');
       setTimeout(() => setNotifying(null), 3000);
       return false;
     }
@@ -137,7 +139,19 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-slate-50/50 shadow-2xl relative overflow-hidden">
       {!isWelcome && (
         <header className={`relative bg-[#5b806d] text-white px-6 transition-all duration-300 ${isDashboard ? 'pt-12 pb-24 rounded-b-[42px]' : 'py-5 shadow-lg'}`}>
-          {/* HEADER INTACTO */}
+           <div className="flex justify-between items-center relative z-10">
+            <div>
+              <h1 className="text-xl font-black tracking-tighter">DELTA <span className="font-light opacity-70">PRO</span></h1>
+              <p className="text-[10px] uppercase tracking-[0.2em] opacity-60 font-bold">Portaria Inteligente</p>
+            </div>
+            <button 
+              onClick={() => loadData()}
+              disabled={loading}
+              className={`p-2 rounded-xl bg-white/10 backdrop-blur-md transition-all ${loading ? 'animate-spin' : 'active:scale-95'}`}
+            >
+              {ICONS.REFRESH}
+            </button>
+          </div>
         </header>
       )}
 
@@ -206,7 +220,7 @@ const App: React.FC = () => {
             )}
             {view === ViewMode.RECORDS && (
               <RecordsList
-                records={records.slice(0, 5)}
+                records={records}
                 loading={loading}
                 onRefresh={() => loadData()}
                 onBack={() => setView(ViewMode.DASHBOARD)}
@@ -215,6 +229,24 @@ const App: React.FC = () => {
           </>
         )}
       </main>
+
+      {/* Menu Inferior Fixo */}
+      {!isWelcome && (
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/80 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-3xl p-2 flex justify-around items-center z-50">
+          <button onClick={() => setView(ViewMode.DASHBOARD)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.DASHBOARD ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+            {ICONS.HOME}
+          </button>
+          <button onClick={() => setView(ViewMode.PARTNERS)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.PARTNERS ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+            {ICONS.USERS}
+          </button>
+          <button onClick={() => setView(ViewMode.REGISTRATION)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.REGISTRATION ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+            {ICONS.PLUS}
+          </button>
+          <button onClick={() => setView(ViewMode.REPORTS)} className={`p-3 rounded-2xl transition-all ${view === ViewMode.REPORTS ? 'bg-[#5b806d] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+            {ICONS.REPORT}
+          </button>
+        </nav>
+      )}
     </div>
   );
 };
