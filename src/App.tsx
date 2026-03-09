@@ -11,7 +11,6 @@ import RecordsList from './components/RecordsList';
 import Welcome from './components/Welcome';
 
 const App: React.FC = () => {
-
   const [view, setView] = useState<ViewMode>(ViewMode.WELCOME);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -26,11 +25,9 @@ const App: React.FC = () => {
   const [notifying, setNotifying] = useState<string | null>(null);
 
   const loadData = useCallback(async (silent = false) => {
-
     if (!silent) setLoading(true);
 
     try {
-
       const dynamicCompanies = await sheetService.fetchCompanies();
 
       const currentCompanies =
@@ -39,85 +36,55 @@ const App: React.FC = () => {
       setCompanies(currentCompanies);
 
       const partnersPromises = currentCompanies.map(async (company) => {
-        const csv = await sheetService.fetchSheetCSV(company);
-        return sheetService.parsePartners(csv, company);
+        try {
+          const csv = await sheetService.fetchSheetCSV(company);
+          return sheetService.parsePartners(csv, company);
+        } catch {
+          return [];
+        }
       });
 
       const partnersResults = await Promise.all(partnersPromises);
-
       setPartners(partnersResults.flat());
 
       const recordsCsv = await sheetService.fetchSheetCSV(DATA_TAB_NAME);
-
       const parsedRecords = sheetService.parseAttendanceRecords(recordsCsv);
 
       setRecords(parsedRecords);
-
       setError(null);
-
     } catch (err) {
-
-      console.error("Erro sincronizando:", err);
+      console.error('Erro sincronizando:', err);
 
       if (!silent) {
-        setError("Erro ao sincronizar dados.");
+        setError('Erro ao sincronizar dados.');
       }
-
     } finally {
-
       if (!silent) setLoading(false);
-
     }
-
   }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  /*
-  ======================================================
-  CALCULA QUEM ESTÁ NA PLANTA (ENTRADA - SAÍDA)
-  ======================================================
-  */
+  const stayReports = useMemo(
+    () => sheetService.calculateStayReports(records),
+    [records]
+  );
 
-  const activeNow = useMemo(() => {
-
-    const map = new Map<string, AttendanceRecord>();
-
-    records.forEach(r => {
-
-      const key = r.partnerName.toLowerCase();
-
-      if (r.type === 'ENTRY') {
-        map.set(key, r);
-      }
-
-      if (r.type === 'EXIT') {
-        map.delete(key);
-      }
-
-    });
-
-    return Array.from(map.values());
-
-  }, [records]);
-
-  /*
-  ======================================================
-  REGISTRAR ENTRADA / SAÍDA
-  ======================================================
-  */
+  const activeNow = useMemo(
+    () => stayReports.filter((r) => !r.exitTime),
+    [stayReports]
+  );
 
   const handleRegisterAction = async (
     partnerName: string,
     type: 'ENTRY' | 'EXIT'
   ) => {
-
-    setNotifying("Enviando...");
+    setNotifying('Enviando...');
 
     const p = partners.find(
-      part =>
+      (part) =>
         part.name.trim().toLowerCase() ===
         partnerName.trim().toLowerCase()
     );
@@ -139,44 +106,29 @@ const App: React.FC = () => {
     );
 
     if (success) {
+      setRecords((prev) => [tempRecord, ...prev]);
 
-      setRecords(prev => [tempRecord, ...prev]);
-
-      setNotifying("Registrado!");
+      setNotifying('Registrado!');
 
       setTimeout(() => {
-
         setNotifying(null);
         loadData(true);
-
       }, 2000);
 
       return true;
-
     } else {
-
-      setNotifying("Falha no envio");
+      setNotifying('Falha no envio');
 
       setTimeout(() => setNotifying(null), 2000);
 
       return false;
-
     }
-
   };
 
-  /*
-  ======================================================
-  RENDERIZA TELAS
-  ======================================================
-  */
-
   const renderView = () => {
-
     switch (view) {
-
       case ViewMode.WELCOME:
-        return <Welcome onStart={() => setView(ViewMode.DASHBOARD)} />
+        return <Welcome onStart={() => setView(ViewMode.DASHBOARD)} />;
 
       case ViewMode.DASHBOARD:
         return (
@@ -185,24 +137,24 @@ const App: React.FC = () => {
             records={records}
             loading={loading}
             onRefresh={() => loadData()}
-            onNavigateAction={(t) => {
-              setRegistrationInitialTab(t);
+            onNavigateAction={(tab) => {
+              setRegistrationInitialTab(tab);
               setView(ViewMode.REGISTRATION);
             }}
           />
-        )
+        );
 
       case ViewMode.PARTNERS:
         return (
           <PartnersList
             partners={partners}
             companies={companies}
-            activeReports={activeNow}
+            activeReports={stayReports}
             loading={loading}
             onQuickRegister={handleRegisterAction}
             onBack={() => setView(ViewMode.DASHBOARD)}
           />
-        )
+        );
 
       case ViewMode.REPORTS:
         return (
@@ -211,7 +163,7 @@ const App: React.FC = () => {
             loading={loading}
             onBack={() => setView(ViewMode.DASHBOARD)}
           />
-        )
+        );
 
       case ViewMode.REGISTRATION:
         return (
@@ -223,7 +175,7 @@ const App: React.FC = () => {
             initialTab={registrationInitialTab}
             onBack={() => setView(ViewMode.DASHBOARD)}
           />
-        )
+        );
 
       case ViewMode.RECORDS:
         return (
@@ -233,27 +185,32 @@ const App: React.FC = () => {
             onRefresh={() => loadData()}
             onBack={() => setView(ViewMode.DASHBOARD)}
           />
-        )
+        );
 
       default:
-        return null
-
+        return null;
     }
-
   };
 
-  /*
-  ======================================================
-  LAYOUT
-  ======================================================
-  */
+  const showBottomMenu = view === ViewMode.DASHBOARD;
 
   return (
+    <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-slate-50 shadow-2xl relative overflow-hidden">
+      {notifying && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] animate-bounce">
+          <div className="px-6 py-3 rounded-full bg-slate-800 text-white shadow-2xl font-black text-[10px] uppercase tracking-widest">
+            {notifying}
+          </div>
+        </div>
+      )}
 
-    <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-slate-50 shadow-2xl">
-
-      <main className="flex-1 overflow-y-auto p-4 pb-24">
-
+      <main
+        className={
+          view === ViewMode.WELCOME
+            ? 'flex-1 overflow-y-auto'
+            : `flex-1 overflow-y-auto ${showBottomMenu ? 'pb-24' : 'pb-6'}`
+        }
+      >
         {error ? (
           <div className="p-10 text-center">
             <p className="text-sm text-slate-500">{error}</p>
@@ -261,55 +218,53 @@ const App: React.FC = () => {
         ) : (
           renderView()
         )}
-
       </main>
 
-      {/* MENU APENAS NO DASHBOARD */}
+      {showBottomMenu && (
+        <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center p-3 z-20 shadow-2xl rounded-t-[32px]">
+          <button
+            onClick={() => setView(ViewMode.DASHBOARD)}
+            className="flex flex-col items-center gap-1 text-[#5b806d]"
+          >
+            <ICONS.Dashboard className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">
+              Início
+            </span>
+          </button>
 
-      {view === ViewMode.DASHBOARD && (
+          <button
+            onClick={() => setView(ViewMode.PARTNERS)}
+            className="flex flex-col items-center gap-1 text-slate-400"
+          >
+            <ICONS.Users className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">
+              Empresas
+            </span>
+          </button>
 
-      <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t flex justify-around items-center p-3 shadow-xl">
+          <button
+            onClick={() => setView(ViewMode.REPORTS)}
+            className="flex flex-col items-center gap-1 text-slate-400"
+          >
+            <ICONS.FileText className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">
+              Relatórios
+            </span>
+          </button>
 
-        <button
-          onClick={() => setView(ViewMode.DASHBOARD)}
-          className="flex flex-col items-center text-[#5b806d]"
-        >
-          <ICONS.Dashboard className="w-5 h-5" />
-          <span className="text-[9px] font-bold">INÍCIO</span>
-        </button>
-
-        <button
-          onClick={() => setView(ViewMode.PARTNERS)}
-          className="flex flex-col items-center text-slate-400"
-        >
-          <ICONS.Users className="w-5 h-5" />
-          <span className="text-[9px] font-bold">EMPRESAS</span>
-        </button>
-
-        <button
-          onClick={() => setView(ViewMode.REPORTS)}
-          className="flex flex-col items-center text-slate-400"
-        >
-          <ICONS.FileText className="w-5 h-5" />
-          <span className="text-[9px] font-bold">RELATÓRIOS</span>
-        </button>
-
-        <button
-          onClick={() => setView(ViewMode.RECORDS)}
-          className="flex flex-col items-center text-slate-400"
-        >
-          <ICONS.History className="w-5 h-5" />
-          <span className="text-[9px] font-bold">REGISTROS</span>
-        </button>
-
-      </nav>
-
+          <button
+            onClick={() => setView(ViewMode.RECORDS)}
+            className="flex flex-col items-center gap-1 text-slate-400"
+          >
+            <ICONS.History className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">
+              Registros
+            </span>
+          </button>
+        </nav>
       )}
-
     </div>
-
   );
-
 };
 
 export default App;
