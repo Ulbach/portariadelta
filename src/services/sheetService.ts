@@ -1,41 +1,79 @@
 import { Partner, AttendanceRecord, StayReport } from '../types';
 import { SHEET_ID, SCRIPT_URL, DATA_TAB_NAME } from '../constants';
 
+/* ======================================================
+   NORMALIZAÇÃO DE TEXTO
+====================================================== */
 const normalize = (str: string) =>
   str?.toString().trim().toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') || '';
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') || '';
+
+/* ======================================================
+   GERADOR DE ID SEGURO
+====================================================== */
+function uid() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'id-' + Math.random().toString(36).substring(2, 10);
+}
 
 /* ======================================================
    EMPRESAS
 ====================================================== */
 export async function fetchCompanies(): Promise<string[]> {
+
   if (!SCRIPT_URL) return [];
 
   try {
-    const res = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
-    const data = await res.json();
 
-    return (data.companies || []).filter((n: string) => {
-      const name = normalize(n);
-      return name !== 'dados' &&
-        !['config', 'log', 'base'].some(k => name.includes(k));
+    const res = await fetch(`${SCRIPT_URL}?t=${Date.now()}`, {
+      cache: 'no-store'
     });
 
-  } catch {
+    const data = await res.json();
+
+    if (!data?.companies) return [];
+
+    return data.companies.filter((n: string) => {
+
+      const name = normalize(n);
+
+      return (
+        name !== 'dados' &&
+        !['config', 'log', 'base'].some(k => name.includes(k))
+      );
+
+    });
+
+  } catch (err) {
+
+    console.error("Erro fetchCompanies:", err);
     return [];
+
   }
+
 }
 
 /* ======================================================
-   CSV LOADER
+   CSV LOADER DO GOOGLE SHEETS
 ====================================================== */
 export async function fetchSheetCSV(sheetName: string): Promise<string[][]> {
+
   try {
 
     const url =
       `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, {
+      cache: 'no-store'
+    });
+
+    if (!res.ok) {
+      console.error("Erro HTTP CSV:", res.status);
+      return [];
+    }
 
     const text = await res.text();
 
@@ -46,47 +84,65 @@ export async function fetchSheetCSV(sheetName: string): Promise<string[][]> {
       .map(line =>
         line
           .split(regex)
-          .map(cell => cell.replace(/^"|"$/g, '').trim())
+          .map(cell =>
+            cell
+              .replace(/^"|"$/g, '')
+              .replace(/""/g, '"')
+              .trim()
+          )
       )
-      .filter(row => row.length >= 2);
+      .filter(row => row.length > 1 && row.some(c => c !== ''));
 
-  } catch {
+  } catch (err) {
+
+    console.error("Erro CSV:", err);
     return [];
+
   }
+
 }
 
 /* ======================================================
-   PARCEIROS
+   PARSER DE PARCEIROS
 ====================================================== */
 export function parsePartners(csv: string[][], company: string): Partner[] {
 
   if (csv.length <= 1) return [];
 
-  return csv.slice(1).map((r, i) => {
+  const partners: Partner[] = [];
+
+  csv.slice(1).forEach((r, i) => {
 
     const name = r[0]?.trim();
 
-    if (!name) return null;
+    if (!name) return;
 
-    return {
+    partners.push({
+
       id: `p-${company}-${i}`,
       name: name,
       document: r[2] || '',
       company: company,
       status: r[1]?.trim() || 'Ativo'
-    };
 
-  }).filter(Boolean) as Partner[];
+    });
+
+  });
+
+  return partners;
+
 }
 
 /* ======================================================
    PARSER DA ABA DADOS
+
    A: ID
    B: DataEntrada
    C: Nome
    D: Status
    E: DataSaida
    F: Empresa
+
 ====================================================== */
 export function parseAttendanceRecords(rows: string[][]): AttendanceRecord[] {
 
@@ -96,7 +152,11 @@ export function parseAttendanceRecords(rows: string[][]): AttendanceRecord[] {
 
   rows.slice(1).forEach(row => {
 
-    const [id, dataEntrada, nome, , dataSaida, empresa] = row;
+    const id = row[0];
+    const dataEntrada = row[1];
+    const nome = row[2];
+    const dataSaida = row[4];
+    const empresa = row[5];
 
     if (!nome || !dataEntrada) return;
 
@@ -105,12 +165,14 @@ export function parseAttendanceRecords(rows: string[][]): AttendanceRecord[] {
     if (!isNaN(entryDate.getTime())) {
 
       records.push({
-        id: id || `e-${crypto.randomUUID()}`,
+
+        id: id || `e-${uid()}`,
         partnerId: '',
         partnerName: nome.trim(),
         company: empresa || 'Parceiro',
         type: 'ENTRY',
         timestamp: entryDate
+
       });
 
     }
@@ -122,25 +184,30 @@ export function parseAttendanceRecords(rows: string[][]): AttendanceRecord[] {
       if (!isNaN(exitDate.getTime())) {
 
         records.push({
-          id: id || `s-${crypto.randomUUID()}`,
+
+          id: id || `s-${uid()}`,
           partnerId: '',
           partnerName: nome.trim(),
           company: empresa || 'Parceiro',
           type: 'EXIT',
           timestamp: exitDate
+
         });
 
       }
+
     }
 
   });
 
-  // Ordena do mais recente
-  return records.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  return records.sort(
+    (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+  );
+
 }
 
 /* ======================================================
-   PRESENÇA ATUAL
+   VERIFICA PRESENÇA ATUAL
 ====================================================== */
 export function isPartnerInside(
   records: AttendanceRecord[],
@@ -154,6 +221,7 @@ export function isPartnerInside(
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
 
   return last?.type === 'ENTRY';
+
 }
 
 /* ======================================================
@@ -178,9 +246,7 @@ export function calculateStayReports(
 
       open[key] = r;
 
-    }
-
-    if (r.type === 'EXIT' && open[key]) {
+    } else if (r.type === 'EXIT' && open[key]) {
 
       const entry = open[key];
 
@@ -190,34 +256,40 @@ export function calculateStayReports(
         );
 
       result.push({
+
         recordId: entry.id,
         partnerName: entry.partnerName,
         company: entry.company,
         entryTime: entry.timestamp,
         exitTime: r.timestamp,
         durationMinutes: duration
+
       });
 
       delete open[key];
+
     }
 
   });
 
-  // Pessoas ainda dentro
+  /* pessoas ainda dentro */
   Object.values(open).forEach(e => {
 
     result.push({
+
       recordId: e.id,
       partnerName: e.partnerName,
       company: e.company,
       entryTime: e.timestamp
+
     });
 
   });
 
-  return result.sort((a, b) =>
-    b.entryTime.getTime() - a.entryTime.getTime()
+  return result.sort(
+    (a, b) => b.entryTime.getTime() - a.entryTime.getTime()
   );
+
 }
 
 /* ======================================================
@@ -232,22 +304,31 @@ export async function appendRecord(
 
   try {
 
-    await fetch(SCRIPT_URL, {
+    const res = await fetch(SCRIPT_URL, {
+
       method: 'POST',
-      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+
       body: JSON.stringify({
+
         name: p.name,
         company: p.company,
         type,
         tab: DATA_TAB_NAME
+
       })
+
     });
 
-    return true;
+    return res.ok;
 
-  } catch {
+  } catch (err) {
 
+    console.error("Erro appendRecord:", err);
     return false;
 
   }
+
 }
