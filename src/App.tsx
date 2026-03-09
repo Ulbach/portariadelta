@@ -75,15 +75,39 @@ const App: React.FC = () => {
     loadData();
   }, []);
 
-  const stayReports = useMemo(
-    () => sheetService.calculateStayReports(records),
-    [records]
-  );
+  /*
+  ======================================================
+  CALCULA QUEM ESTÁ NA PLANTA (ENTRADA - SAÍDA)
+  ======================================================
+  */
 
-  const activeNow = useMemo(
-    () => stayReports.filter(r => !r.exitTime),
-    [stayReports]
-  );
+  const activeNow = useMemo(() => {
+
+    const map = new Map<string, AttendanceRecord>();
+
+    records.forEach(r => {
+
+      const key = r.partnerName.toLowerCase();
+
+      if (r.type === 'ENTRY') {
+        map.set(key, r);
+      }
+
+      if (r.type === 'EXIT') {
+        map.delete(key);
+      }
+
+    });
+
+    return Array.from(map.values());
+
+  }, [records]);
+
+  /*
+  ======================================================
+  REGISTRAR ENTRADA / SAÍDA
+  ======================================================
+  */
 
   const handleRegisterAction = async (
     partnerName: string,
@@ -123,10 +147,9 @@ const App: React.FC = () => {
       setTimeout(() => {
 
         setNotifying(null);
-
         loadData(true);
 
-      }, 3000);
+      }, 2000);
 
       return true;
 
@@ -134,13 +157,19 @@ const App: React.FC = () => {
 
       setNotifying("Falha no envio");
 
-      setTimeout(() => setNotifying(null), 3000);
+      setTimeout(() => setNotifying(null), 2000);
 
       return false;
 
     }
 
   };
+
+  /*
+  ======================================================
+  RENDERIZA TELAS
+  ======================================================
+  */
 
   const renderView = () => {
 
@@ -168,7 +197,7 @@ const App: React.FC = () => {
           <PartnersList
             partners={partners}
             companies={companies}
-            activeReports={stayReports}
+            activeReports={activeNow}
             loading={loading}
             onQuickRegister={handleRegisterAction}
             onBack={() => setView(ViewMode.DASHBOARD)}
@@ -213,6 +242,12 @@ const App: React.FC = () => {
 
   };
 
+  /*
+  ======================================================
+  LAYOUT
+  ======================================================
+  */
+
   return (
 
     <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-slate-50 shadow-2xl">
@@ -229,7 +264,10 @@ const App: React.FC = () => {
 
       </main>
 
-      {/* MENU FIXO */}
+      {/* MENU APENAS NO DASHBOARD */}
+
+      {view === ViewMode.DASHBOARD && (
+
       <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t flex justify-around items-center p-3 shadow-xl">
 
         <button
@@ -265,6 +303,8 @@ const App: React.FC = () => {
         </button>
 
       </nav>
+
+      )}
 
     </div>
 
