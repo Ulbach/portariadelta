@@ -51,7 +51,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-100/80">
-      <header className="relative bg-[#698c78] text-white px-6 pt-14 pb-24 rounded-b-[40px] overflow-hidden">
+      <header className="relative bg-[#698c78] text-white px-6 pt-14 pb-32 rounded-b-[40px] overflow-hidden">
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-[19px] font-black leading-tight tracking-tight">
@@ -83,7 +83,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </button>
         </div>
 
-        <div className="absolute -bottom-8 left-6 right-6">
+        <div className="absolute -bottom-7 left-6 right-6">
           <div className="bg-white p-5 rounded-[30px] shadow-xl flex items-center justify-between border border-slate-100">
             <div className="flex items-center gap-4 text-left">
               <div className="w-12 h-12 bg-[#5b806d]/10 text-[#5b806d] rounded-2xl flex items-center justify-center">
@@ -110,7 +110,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </header>
 
-      <div className="px-6 pt-14 pb-8 space-y-6">
+      <div className="px-6 pt-12 pb-8 space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => onNavigateAction('NEW')}
