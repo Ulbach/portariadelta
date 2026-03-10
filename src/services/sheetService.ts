@@ -279,3 +279,29 @@ export async function appendRecord(
     return false;
   }
 }
+
+/* ======================================================
+   LIMPAR TODOS OS REGISTROS
+====================================================== */
+export async function clearAllRecords(): Promise<boolean> {
+  if (!SCRIPT_URL) return false;
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify({
+        action: 'CLEAR',
+        tab: DATA_TAB_NAME
+      })
+    });
+
+    return true;
+  } catch (err) {
+    console.error('Erro clearAllRecords:', err);
+    return false;
+  }
+}
