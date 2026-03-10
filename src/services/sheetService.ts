@@ -1,277 +1,281 @@
-import { Partner, AttendanceRecord, StayReport } from '../types';
-import { SHEET_ID, SCRIPT_URL, DATA_TAB_NAME } from '../constants';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { ViewMode, Partner, AttendanceRecord } from './types';
+import { ICONS, INITIAL_COMPANIES, DATA_TAB_NAME } from './constants';
+import * as sheetService from './services/sheetService';
 
-const normalize = (str: string) =>
-  str?.toString().trim().toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') || '';
+import Dashboard from './components/Dashboard';
+import PartnersList from './components/PartnersList';
+import Reports from './components/Reports';
+import Registration from './components/Registration';
+import RecordsList from './components/RecordsList';
+import Welcome from './components/Welcome';
 
-function uid() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return 'id-' + Math.random().toString(36).substring(2, 10);
-}
+const App: React.FC = () => {
+  const [view, setView] = useState<ViewMode>(ViewMode.WELCOME);
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [companies, setCompanies] = useState<string[]>(INITIAL_COMPANIES);
 
-function parseBrazilianDate(value: string): Date | null {
-  if (!value || !value.trim()) return null;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const raw = value.trim();
+  const [registrationInitialTab, setRegistrationInitialTab] =
+    useState<'NEW' | 'ACTIVE'>('ACTIVE');
 
-  const direct = new Date(raw);
-  if (!isNaN(direct.getTime())) {
-    return direct;
-  }
+  const [notifying, setNotifying] = useState<string | null>(null);
 
-  const match = raw.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ ,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
-  );
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
 
-  if (!match) return null;
+    try {
+      const dynamicCompanies = await sheetService.fetchCompanies();
+      const currentCompanies =
+        dynamicCompanies.length > 0 ? dynamicCompanies : INITIAL_COMPANIES;
 
-  const [, dd, mm, yyyy, hh = '0', min = '0', ss = '0'] = match;
+      setCompanies(currentCompanies);
 
-  const year = yyyy.length === 2 ? `20${yyyy}` : yyyy;
-
-  const parsed = new Date(
-    Number(year),
-    Number(mm) - 1,
-    Number(dd),
-    Number(hh),
-    Number(min),
-    Number(ss)
-  );
-
-  return isNaN(parsed.getTime()) ? null : parsed;
-}
-
-/* ======================================================
-   EMPRESAS
-====================================================== */
-export async function fetchCompanies(): Promise<string[]> {
-  if (!SCRIPT_URL) return [];
-
-  try {
-    const res = await fetch(`${SCRIPT_URL}?t=${Date.now()}`, {
-      cache: 'no-store'
-    });
-
-    const data = await res.json();
-
-    return (data.companies || []).filter((n: string) => {
-      const name = normalize(n);
-
-      return (
-        name !== 'dados' &&
-        !['config', 'log', 'base'].some((k) => name.includes(k))
-      );
-    });
-  } catch (err) {
-    console.error('Erro fetchCompanies:', err);
-    return [];
-  }
-}
-
-/* ======================================================
-   CSV LOADER
-====================================================== */
-export async function fetchSheetCSV(sheetName: string): Promise<string[][]> {
-  try {
-    const url =
-      `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-
-    const res = await fetch(url, { cache: 'no-store' });
-    const text = await res.text();
-
-    const regex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
-
-    return text
-      .split(/\r?\n/)
-      .map((line) =>
-        line
-          .split(regex)
-          .map((cell) =>
-            cell
-              .replace(/^"|"$/g, '')
-              .replace(/""/g, '"')
-              .trim()
-          )
-      )
-      .filter((row) => row.length > 1 && row.some((c) => c !== ''));
-  } catch (err) {
-    console.error('Erro fetchSheetCSV:', err);
-    return [];
-  }
-}
-
-/* ======================================================
-   PARCEIROS
-====================================================== */
-export function parsePartners(csv: string[][], company: string): Partner[] {
-  if (csv.length <= 1) return [];
-
-  return csv
-    .slice(1)
-    .map((r, i) => {
-      const name = r[0]?.trim();
-
-      if (!name) return null;
-
-      return {
-        id: `p-${company}-${i}`,
-        name,
-        document: r[2] || '',
-        company,
-        status: r[1]?.trim() || 'Ativo'
-      };
-    })
-    .filter(Boolean) as Partner[];
-}
-
-/* ======================================================
-   PARSER DA ABA DADOS
-====================================================== */
-export function parseAttendanceRecords(rows: string[][]): AttendanceRecord[] {
-  if (rows.length <= 1) return [];
-
-  const records: AttendanceRecord[] = [];
-  const now = Date.now();
-  const twoDaysAgo = now - 1000 * 60 * 60 * 24 * 2;
-
-  rows.slice(1).forEach((row) => {
-    const [id, dataEntrada, nome, , dataSaida, empresa] = row;
-
-    if (!nome || !dataEntrada) return;
-
-    const entryDate = parseBrazilianDate(dataEntrada);
-
-    if (entryDate && entryDate.getTime() >= twoDaysAgo) {
-      records.push({
-        id: id || `e-${uid()}`,
-        partnerId: '',
-        partnerName: nome.trim(),
-        company: empresa || 'Parceiro',
-        type: 'ENTRY',
-        timestamp: entryDate
+      const partnersPromises = currentCompanies.map(async (company) => {
+        try {
+          const csv = await sheetService.fetchSheetCSV(company);
+          return sheetService.parsePartners(csv, company);
+        } catch {
+          return [];
+        }
       });
-    }
 
-    if (dataSaida && dataSaida.trim() !== '') {
-      const exitDate = parseBrazilianDate(dataSaida);
+      const partnersResults = await Promise.all(partnersPromises);
+      setPartners(partnersResults.flat());
 
-      if (exitDate && exitDate.getTime() >= twoDaysAgo) {
-        records.push({
-          id: id || `s-${uid()}`,
-          partnerId: '',
-          partnerName: nome.trim(),
-          company: empresa || 'Parceiro',
-          type: 'EXIT',
-          timestamp: exitDate
-        });
+      const recordsCsv = await sheetService.fetchSheetCSV(DATA_TAB_NAME);
+      const parsedRecords = sheetService.parseAttendanceRecords(recordsCsv);
+
+      setRecords(parsedRecords);
+      setError(null);
+    } catch (err) {
+      console.error('Erro sincronizando:', err);
+
+      if (!silent) {
+        setError('Erro ao sincronizar dados.');
       }
+    } finally {
+      if (!silent) setLoading(false);
     }
-  });
+  }, []);
 
-  return records.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-}
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-/* ======================================================
-   PRESENÇA ATUAL
-====================================================== */
-export function isPartnerInside(
-  records: AttendanceRecord[],
-  partnerName: string
-): boolean {
-  const normalized = normalize(partnerName);
-
-  const last = records
-    .filter((r) => normalize(r.partnerName) === normalized)
-    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
-
-  return last?.type === 'ENTRY';
-}
-
-/* ======================================================
-   RELATÓRIO DE PERMANÊNCIA
-====================================================== */
-export function calculateStayReports(
-  records: AttendanceRecord[]
-): StayReport[] {
-  const sorted = [...records].sort(
-    (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+  const stayReports = useMemo(
+    () => sheetService.calculateStayReports(records),
+    [records]
   );
 
-  const open: Record<string, AttendanceRecord> = {};
-  const result: StayReport[] = [];
-
-  sorted.forEach((r) => {
-    const key = normalize(r.partnerName);
-
-    if (r.type === 'ENTRY') {
-      open[key] = r;
-    }
-
-    if (r.type === 'EXIT' && open[key]) {
-      const entry = open[key];
-
-      const duration = Math.round(
-        (r.timestamp.getTime() - entry.timestamp.getTime()) / 60000
-      );
-
-      result.push({
-        recordId: entry.id,
-        partnerName: entry.partnerName,
-        company: entry.company,
-        entryTime: entry.timestamp,
-        exitTime: r.timestamp,
-        durationMinutes: duration
-      });
-
-      delete open[key];
-    }
-  });
-
-  Object.values(open).forEach((e) => {
-    result.push({
-      recordId: e.id,
-      partnerName: e.partnerName,
-      company: e.company,
-      entryTime: e.timestamp
-    });
-  });
-
-  return result.sort(
-    (a, b) => b.entryTime.getTime() - a.entryTime.getTime()
+  const activeNow = useMemo(
+    () => stayReports.filter((r) => !r.exitTime),
+    [stayReports]
   );
-}
 
-/* ======================================================
-   ENVIO PARA APPS SCRIPT
-====================================================== */
-export async function appendRecord(
-  p: { name: string; company: string },
-  type: 'ENTRY' | 'EXIT'
-): Promise<boolean> {
-  if (!SCRIPT_URL) return false;
+  const handleRegisterAction = async (
+    partnerName: string,
+    type: 'ENTRY' | 'EXIT'
+  ) => {
+    const normalizedName = partnerName.trim();
+    const isInside = sheetService.isPartnerInside(records, normalizedName);
 
-  try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
-      },
-      body: JSON.stringify({
-        name: p.name,
-        company: p.company,
-        type,
-        tab: DATA_TAB_NAME
-      })
-    });
+    if (type === 'ENTRY' && isInside) {
+      setNotifying('Parceiro já está na planta.');
+      setTimeout(() => setNotifying(null), 2000);
+      return false;
+    }
 
-    return true;
-  } catch (err) {
-    console.error('Erro appendRecord:', err);
-    return false;
-  }
-}
+    if (type === 'EXIT' && !isInside) {
+      setNotifying('Parceiro não está na planta.');
+      setTimeout(() => setNotifying(null), 2000);
+      return false;
+    }
+
+    setNotifying('Enviando...');
+
+    const p = partners.find(
+      (part) =>
+        part.name.trim().toLowerCase() === normalizedName.toLowerCase()
+    );
+
+    const company = p?.company || 'Parceiro';
+
+    const tempRecord: AttendanceRecord = {
+      id: 'temp-' + Date.now(),
+      partnerId: '',
+      partnerName: normalizedName,
+      company,
+      type,
+      timestamp: new Date()
+    };
+
+    const success = await sheetService.appendRecord(
+      { name: normalizedName, company },
+      type
+    );
+
+    if (success) {
+      setRecords((prev) => [tempRecord, ...prev]);
+
+      setNotifying('Registrado!');
+
+      setTimeout(() => {
+        setNotifying(null);
+        loadData(true);
+      }, 2000);
+
+      return true;
+    } else {
+      setNotifying('Falha no envio');
+      setTimeout(() => setNotifying(null), 2000);
+      return false;
+    }
+  };
+
+  const renderView = () => {
+    switch (view) {
+      case ViewMode.WELCOME:
+        return <Welcome onStart={() => setView(ViewMode.DASHBOARD)} />;
+
+      case ViewMode.DASHBOARD:
+        return (
+          <Dashboard
+            activeCount={activeNow.length}
+            records={records}
+            loading={loading}
+            onRefresh={() => loadData()}
+            onNavigateAction={(tab) => {
+              setRegistrationInitialTab(tab);
+              setView(ViewMode.REGISTRATION);
+            }}
+          />
+        );
+
+      case ViewMode.PARTNERS:
+        return (
+          <PartnersList
+            partners={partners}
+            companies={companies}
+            activeReports={stayReports}
+            loading={loading}
+            onQuickRegister={handleRegisterAction}
+            onBack={() => setView(ViewMode.DASHBOARD)}
+          />
+        );
+
+      case ViewMode.REPORTS:
+        return (
+          <Reports
+            records={records}
+            loading={loading}
+            onBack={() => setView(ViewMode.DASHBOARD)}
+          />
+        );
+
+      case ViewMode.REGISTRATION:
+        return (
+          <Registration
+            partners={partners}
+            activeReports={activeNow}
+            onRegistered={() => loadData(true)}
+            onQuickRegister={handleRegisterAction}
+            initialTab={registrationInitialTab}
+            onBack={() => setView(ViewMode.DASHBOARD)}
+          />
+        );
+
+      case ViewMode.RECORDS:
+        return (
+          <RecordsList
+            records={records}
+            loading={loading}
+            onRefresh={() => loadData()}
+            onBack={() => setView(ViewMode.DASHBOARD)}
+          />
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const showBottomMenu = view === ViewMode.DASHBOARD;
+
+  return (
+    <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-slate-50 shadow-2xl relative overflow-hidden">
+      {notifying && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] animate-bounce">
+          <div className="px-6 py-3 rounded-full bg-slate-800 text-white shadow-2xl font-black text-[10px] uppercase tracking-widest">
+            {notifying}
+          </div>
+        </div>
+      )}
+
+      <main
+        className={
+          view === ViewMode.WELCOME
+            ? 'flex-1 overflow-y-auto'
+            : `flex-1 overflow-y-auto ${showBottomMenu ? 'pb-24' : 'pb-6'}`
+        }
+      >
+        {error ? (
+          <div className="p-10 text-center">
+            <p className="text-sm text-slate-500">{error}</p>
+          </div>
+        ) : (
+          renderView()
+        )}
+      </main>
+
+      {showBottomMenu && (
+        <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center p-3 z-20 shadow-2xl rounded-t-[32px]">
+          <button
+            onClick={() => setView(ViewMode.WELCOME)}
+            className="flex flex-col items-center gap-1 text-[#5b806d]"
+          >
+            <ICONS.Dashboard className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">
+              Início
+            </span>
+          </button>
+
+          <button
+            onClick={() => setView(ViewMode.PARTNERS)}
+            className="flex flex-col items-center gap-1 text-slate-400"
+          >
+            <ICONS.Users className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">
+              Empresas
+            </span>
+          </button>
+
+          <button
+            onClick={() => setView(ViewMode.REPORTS)}
+            className="flex flex-col items-center gap-1 text-slate-400"
+          >
+            <ICONS.FileText className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">
+              Relatórios
+            </span>
+          </button>
+
+          <button
+            onClick={() => setView(ViewMode.RECORDS)}
+            className="flex flex-col items-center gap-1 text-slate-400"
+          >
+            <ICONS.History className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">
+              Registros
+            </span>
+          </button>
+        </nav>
+      )}
+    </div>
+  );
+};
+
+export default App;
