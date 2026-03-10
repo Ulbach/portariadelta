@@ -81,12 +81,27 @@ const App: React.FC = () => {
     partnerName: string,
     type: 'ENTRY' | 'EXIT'
   ) => {
+    const normalizedName = partnerName.trim();
+
+    const isInside = sheetService.isPartnerInside(records, normalizedName);
+
+    if (type === 'ENTRY' && isInside) {
+      setNotifying('Parceiro já está na planta.');
+      setTimeout(() => setNotifying(null), 2000);
+      return false;
+    }
+
+    if (type === 'EXIT' && !isInside) {
+      setNotifying('Parceiro não está na planta.');
+      setTimeout(() => setNotifying(null), 2000);
+      return false;
+    }
+
     setNotifying('Enviando...');
 
     const p = partners.find(
       (part) =>
-        part.name.trim().toLowerCase() ===
-        partnerName.trim().toLowerCase()
+        part.name.trim().toLowerCase() === normalizedName.toLowerCase()
     );
 
     const company = p?.company || 'Parceiro';
@@ -94,14 +109,14 @@ const App: React.FC = () => {
     const tempRecord: AttendanceRecord = {
       id: 'temp-' + Date.now(),
       partnerId: '',
-      partnerName,
+      partnerName: normalizedName,
       company,
       type,
       timestamp: new Date()
     };
 
     const success = await sheetService.appendRecord(
-      { name: partnerName.trim(), company },
+      { name: normalizedName, company },
       type
     );
 
