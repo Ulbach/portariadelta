@@ -84,12 +84,33 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* CARD CONTAGEM */}
-        <div className="absolute -bottom-5 left-6 right-6">
+        <div className="absolute -bottom-3 left-6 right-6">
           <div className="bg-white p-5 rounded-[30px] shadow-xl flex items-center justify-between border border-slate-100">
             <div className="flex items-center gap-4 text-left">
-              <div className="relative w-12 h-12 rounded-2xl bg-[#5b806d]/10 flex items-center justify-center shrink-0">
+              <div className="relative w-12 h-12 rounded-2xl bg-[#5b806d]/10 flex items-center justify-center shrink-0 shadow-inner">
                 <div className="absolute inset-0 rounded-2xl ring-1 ring-[#5b806d]/10"></div>
-                <ICONS.Users className="w-6 h-6 text-[#5b806d]" />
+
+                {/* Ícone moderno para presença */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-6 h-6 text-[#5b806d]"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.1}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 19a4 4 0 0 0-8 0"
+                  />
+                  <circle cx="11" cy="9" r="3.2" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M17.5 11.5l1.5 1.5 3-3"
+                  />
+                </svg>
               </div>
 
               <div className="flex flex-col">
