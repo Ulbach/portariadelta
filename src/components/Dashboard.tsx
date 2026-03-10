@@ -17,7 +17,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   onRefresh,
   onNavigateAction
 }) => {
-
   const safeRecords = (records || [])
     .map((record) => ({
       ...record,
@@ -52,61 +51,78 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-100/80">
+      {/* HEADER VISUAL NOVO + LÓGICA ANTIGA */}
+      <header className="relative overflow-hidden rounded-b-[42px] bg-[#6f8f7c] pb-28 pt-8 shadow-lg">
+        {/* FUNDO */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-20"
+          style={{
+            backgroundImage:
+              "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80')"
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#7fa08d]/85 to-[#5d7d6c]/90" />
 
-      {/* HEADER CENTRALIZADO */}
-      <header className="relative bg-[#6f8f7c] text-white pt-14 pb-32 rounded-b-[40px]">
-
-        {/* BOTÃO REFRESH */}
-        <button
-          onClick={onRefresh}
-          className="absolute right-6 top-6 w-11 h-11 bg-white/10 rounded-full flex items-center justify-center border border-white/10 hover:bg-white/20 transition"
-        >
-          <svg
-            className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div className="relative z-10 px-6">
+          <button
+            onClick={onRefresh}
+            className="absolute right-6 top-0 w-11 h-11 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 active:scale-95 transition-all hover:bg-white/20"
+            aria-label="Atualizar"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2.5}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9M4.582 9H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2M19.418 15H15"
-            />
-          </svg>
-        </button>
+            <svg
+              className={`w-5 h-5 text-white ${loading ? 'animate-spin' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9M4.582 9H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2M19.418 15H15"
+              />
+            </svg>
+          </button>
 
-        {/* TÍTULO CENTRAL */}
-        <div className="text-center space-y-2">
+          <div className="flex items-start gap-4 pr-16">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-md shrink-0">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-8 h-8 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.8}
+              >
+                <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                <rect x="14" y="3" width="7" height="5" rx="1.5" />
+                <rect x="3" y="14" width="7" height="5" rx="1.5" />
+                <rect x="14" y="11" width="7" height="8" rx="1.5" />
+              </svg>
+            </div>
 
-          <h1 className="text-[22px] font-black tracking-tight">
-            Portaria Inteligente
-          </h1>
+            <div className="min-w-0">
+              <h1 className="text-white text-[18px] font-black leading-tight tracking-tight">
+                Portaria
+                <br />
+                Inteligente
+              </h1>
 
-          <p className="text-[10px] uppercase tracking-[0.3em] text-emerald-100/80 font-bold">
-            Controle de Parceiro
-          </p>
-
-          {/* EMPRESA */}
-          <div className="pt-2">
-            <span className="text-[14px] font-black tracking-[0.25em] text-white/90">
-              # DELTA GERAÇÃO #
-            </span>
+              <p className="mt-1 text-[10px] text-emerald-100/80 font-black uppercase tracking-[0.25em]">
+                Controle de Parceiro
+              </p>
+            </div>
           </div>
-
         </div>
 
         {/* CARD CONTAGEM */}
-        <div className="absolute -bottom-3 left-6 right-6">
-
-          <div className="bg-white p-5 rounded-[30px] shadow-xl flex items-center justify-between border border-slate-100">
-
+        <div className="absolute -bottom-6 left-6 right-6 z-20">
+          <div className="bg-white/80 backdrop-blur-md border border-white/50 rounded-[32px] shadow-[0_10px_30px_rgba(0,0,0,0.12)] px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-
-              <div className="w-12 h-12 bg-[#5b806d]/10 rounded-2xl flex items-center justify-center shadow-inner">
+              <div className="w-14 h-14 rounded-2xl bg-[#5b806d] text-white flex items-center justify-center shadow-md shrink-0">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="w-6 h-6 text-[#5b806d]"
+                  className="w-7 h-7"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -118,155 +134,157 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </svg>
               </div>
 
-              <div className="flex flex-col">
-
-                <span className="text-[30px] font-black text-slate-800 leading-none">
+              <div>
+                <p className="text-[30px] font-black text-slate-800 leading-none">
                   {loading ? '...' : activeCount}
-                </span>
-
-                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">
+                </p>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">
                   Presentes Agora
                 </p>
-
               </div>
-
             </div>
 
             <button
               onClick={() => onNavigateAction('ACTIVE')}
-              className="bg-slate-50 text-slate-500 px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-slate-200 hover:bg-slate-100 transition"
+              className="bg-[#5b806d] text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-md hover:bg-[#4f705f] transition-all active:scale-95"
             >
               Ver Lista
             </button>
-
           </div>
         </div>
-
       </header>
 
-      {/* CONTEÚDO */}
-      <div className="px-6 pt-10 pb-8 space-y-6">
-
+      <div className="px-6 pt-16 pb-8 space-y-6">
         {/* BOTÕES */}
         <div className="grid grid-cols-2 gap-4">
-
           <button
             onClick={() => onNavigateAction('NEW')}
-            className="group bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-3 hover:shadow-md hover:border-[#5b806d]/30 transition"
+            className="group bg-white p-6 rounded-[32px] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all hover:shadow-[0_8px_30px_rgba(91,128,109,0.10)] hover:border-[#5b806d]/20"
           >
-
-            <div className="w-10 h-10 bg-slate-50 text-[#5b806d] rounded-xl flex items-center justify-center group-hover:bg-[#5b806d] group-hover:text-white transition">
-              <ICONS.LogIn className="w-5 h-5" />
+            <div className="w-12 h-12 bg-emerald-50 text-[#5b806d] rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-[#5b806d] group-hover:text-white transition-all duration-300 shadow-sm">
+              <ICONS.LogIn className="w-6 h-6" />
             </div>
-
-            <span className="text-xs font-bold text-slate-700">
+            <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest leading-tight text-center">
               Registrar
               <br />
               Entrada
             </span>
-
           </button>
 
           <button
             onClick={() => onNavigateAction('ACTIVE')}
-            className="group bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-3 hover:shadow-md hover:border-rose-300 transition"
+            className="group bg-white p-6 rounded-[32px] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all hover:shadow-[0_8px_30px_rgba(225,29,72,0.10)] hover:border-rose-100"
           >
-
-            <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition">
-              <ICONS.LogOut className="w-5 h-5" />
+            <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-rose-600 group-hover:text-white transition-all duration-300 shadow-sm">
+              <ICONS.LogOut className="w-6 h-6" />
             </div>
-
-            <span className="text-xs font-bold text-slate-700">
+            <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest leading-tight text-center">
               Registrar
               <br />
               Saída
             </span>
-
           </button>
-
         </div>
 
-        {/* ATIVIDADE */}
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        {/* ATIVIDADE RECENTE */}
+        <div className="bg-white rounded-[40px] border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden">
+          <div className="p-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/20">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#5b806d]"></div>
+              <h3 className="font-black text-xs text-slate-800 uppercase tracking-widest">
+                Atividade Recente
+              </h3>
+            </div>
 
-          <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-
-            <h3 className="font-black text-slate-900 text-[18px]">
-              Atividade Recente
-            </h3>
-
-            <span className="text-[10px] font-bold text-[#5b806d] uppercase tracking-widest">
+            <span className="text-[9px] font-black text-[#5b806d] bg-[#5b806d]/10 px-2 py-1 rounded-lg uppercase tracking-widest">
               {isFallback ? 'Últimos 6' : 'Hoje'}
             </span>
-
           </div>
 
           <div className="divide-y divide-slate-50">
-
-            {displayRecords.map((record, index) => (
-
-              <div
-                key={`${record.id}-${index}`}
-                className="p-4 flex items-center gap-4"
-              >
-
+            {loading ? (
+              <div className="p-16 text-center text-slate-400 text-sm animate-pulse flex flex-col items-center gap-4">
+                <div className="w-10 h-10 border-4 border-[#5b806d] border-t-transparent rounded-full animate-spin"></div>
+                <span className="font-black text-[10px] uppercase tracking-widest">
+                  Sincronizando...
+                </span>
+              </div>
+            ) : displayRecords.length > 0 ? (
+              displayRecords.map((record, index) => (
                 <div
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
-                    record.type === 'ENTRY'
-                      ? 'bg-emerald-50 text-emerald-600'
-                      : 'bg-rose-50 text-rose-600'
-                  }`}
+                  key={`${record.id}-${index}`}
+                  className="p-5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors group"
                 >
-                  {record.type === 'ENTRY'
-                    ? <ICONS.LogIn className="w-5 h-5" />
-                    : <ICONS.LogOut className="w-5 h-5" />}
-                </div>
-
-                <div className="flex-1 min-w-0">
-
-                  <p className="font-black text-slate-900 truncate text-[14px]">
-                    {record.partnerName}
-                  </p>
-
-                  <p className="text-[10px] text-slate-400 uppercase">
-                    {record.company}
-                  </p>
-
-                </div>
-
-                <div className="text-right">
-
-                  <p className="text-[10px] font-bold text-slate-900">
-                    {record.timestamp.toLocaleDateString()}
-                  </p>
-
-                  <p className="text-xs font-bold text-slate-600">
-                    {record.timestamp.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-
-                  <p
-                    className={`text-[9px] font-bold uppercase ${
+                  <div
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110 ${
                       record.type === 'ENTRY'
-                        ? 'text-emerald-500'
-                        : 'text-rose-500'
+                        ? 'bg-emerald-50 text-emerald-600'
+                        : 'bg-rose-50 text-rose-600'
                     }`}
                   >
-                    {record.type === 'ENTRY' ? 'Entrada' : 'Saída'}
-                  </p>
+                    {record.type === 'ENTRY' ? (
+                      <ICONS.LogIn className="w-6 h-6" />
+                    ) : (
+                      <ICONS.LogOut className="w-6 h-6" />
+                    )}
+                  </div>
 
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-slate-800 truncate text-sm uppercase tracking-tight">
+                      {record.partnerName}
+                    </p>
+                    <p className="text-[9px] text-slate-400 font-black truncate uppercase tracking-widest mt-0.5">
+                      {record.company}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-900 leading-tight">
+                      {record.timestamp.toLocaleDateString([], {
+                        day: '2-digit',
+                        month: '2-digit'
+                      })}
+                    </p>
+                    <p className="text-xs font-black text-slate-600 mt-0.5">
+                      {record.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                    <p
+                      className={`text-[8px] font-black uppercase tracking-[0.2em] mt-1 ${
+                        record.type === 'ENTRY'
+                          ? 'text-emerald-500'
+                          : 'text-rose-500'
+                      }`}
+                    >
+                      {record.type === 'ENTRY' ? 'Entrada' : 'Saída'}
+                    </p>
+                  </div>
                 </div>
-
+              ))
+            ) : (
+              <div className="p-20 text-center text-slate-400">
+                <svg
+                  className="w-16 h-16 mx-auto mb-4 opacity-10"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <p className="text-[10px] font-black uppercase tracking-widest">
+                  Nenhum registro hoje
+                </p>
               </div>
-
-            ))}
-
+            )}
           </div>
-
         </div>
-
       </div>
     </div>
   );
