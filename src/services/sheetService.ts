@@ -38,11 +38,6 @@ function parseBrazilianDate(value: string): Date | null {
     return isNaN(parsed.getTime()) ? null : parsed;
   }
 
-  const direct = new Date(raw);
-  if (!isNaN(direct.getTime())) {
-    return direct;
-  }
-
   return null;
 }
 
@@ -115,7 +110,6 @@ export function parsePartners(csv: string[][], company: string): Partner[] {
     .slice(1)
     .map((r, i) => {
       const name = r[0]?.trim();
-
       if (!name) return null;
 
       return {
@@ -140,27 +134,35 @@ export function parseAttendanceRecords(rows: string[][]): AttendanceRecord[] {
   const twoDaysAgo = now - 1000 * 60 * 60 * 24 * 2;
 
   rows.slice(1).forEach((row) => {
-    const [id, dataEntrada, nome, , dataSaida, empresa] = row;
+    const [id, dataEntrada, nome, status, dataSaida, empresa] = row;
 
     if (!nome || !dataEntrada) return;
 
     const entryDate = parseBrazilianDate(dataEntrada);
 
-    if (entryDate && entryDate.getTime() >= twoDaysAgo) {
-      records.push({
-        id: `${id || `e-${uid()}`}-ENTRY`,
-        partnerId: '',
-        partnerName: nome.trim(),
-        company: empresa || 'Parceiro',
-        type: 'ENTRY',
-        timestamp: entryDate
-      });
-    }
+    if (!entryDate || entryDate.getTime() < twoDaysAgo) return;
 
-    if (dataSaida && dataSaida.trim() !== '') {
-      const exitDate = parseBrazilianDate(dataSaida);
+    records.push({
+      id: `${id || `e-${uid()}`}-ENTRY`,
+      partnerId: '',
+      partnerName: nome.trim(),
+      company: empresa || 'Parceiro',
+      type: 'ENTRY',
+      timestamp: entryDate
+    });
 
-      if (exitDate && exitDate.getTime() >= twoDaysAgo) {
+    if ((status || '').toUpperCase() === 'EXIT' && dataSaida && dataSaida.trim() !== '') {
+      let exitDate = parseBrazilianDate(dataSaida);
+
+      // Se a planilha vier só com a data (sem hora) e a saída ficar
+      // antes da entrada, ajusta para fechar a sessão corretamente.
+      if (!exitDate) {
+        exitDate = new Date(entryDate.getTime() + 1000);
+      } else if (exitDate.getTime() <= entryDate.getTime()) {
+        exitDate = new Date(entryDate.getTime() + 1000);
+      }
+
+      if (exitDate.getTime() >= twoDaysAgo) {
         records.push({
           id: `${id || `s-${uid()}`}-EXIT`,
           partnerId: '',
@@ -218,8 +220,9 @@ export function calculateStayReports(
     if (r.type === 'EXIT' && open[key]) {
       const entry = open[key];
 
-      const duration = Math.round(
-        (r.timestamp.getTime() - entry.timestamp.getTime()) / 60000
+      const duration = Math.max(
+        1,
+        Math.round((r.timestamp.getTime() - entry.timestamp.getTime()) / 60000)
       );
 
       result.push({
