@@ -51,20 +51,20 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-100/80">
-      <header className="relative bg-[#698c78] text-white px-6 pt-16 pb-28 rounded-b-[44px] overflow-hidden">
+      <header className="relative bg-[#698c78] text-white px-6 pt-14 pb-24 rounded-b-[40px] overflow-hidden">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-black leading-tight tracking-tight">
+            <h1 className="text-[19px] font-black leading-tight tracking-tight">
               Portaria Inteligente
             </h1>
-            <p className="text-[10px] text-emerald-100/70 uppercase font-black tracking-[0.25em] mt-1">
+            <p className="text-[9px] text-emerald-100/70 uppercase font-black tracking-[0.25em] mt-1">
               Controle de Parceiro
             </p>
           </div>
 
           <button
             onClick={onRefresh}
-            className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/10 active:scale-95 transition-all"
+            className="w-11 h-11 bg-white/10 rounded-full flex items-center justify-center border border-white/10 active:scale-95 transition-all"
             aria-label="Atualizar"
           >
             <svg
@@ -83,18 +83,18 @@ const Dashboard: React.FC<DashboardProps> = ({
           </button>
         </div>
 
-        <div className="absolute -bottom-10 left-6 right-6">
-          <div className="bg-white p-6 rounded-[36px] shadow-xl flex items-center justify-between border border-slate-100">
-            <div className="flex items-center gap-5 text-left">
-              <div className="w-14 h-14 bg-[#5b806d]/10 text-[#5b806d] rounded-2xl flex items-center justify-center">
-                <ICONS.Users className="w-7 h-7" />
+        <div className="absolute -bottom-8 left-6 right-6">
+          <div className="bg-white p-5 rounded-[30px] shadow-xl flex items-center justify-between border border-slate-100">
+            <div className="flex items-center gap-4 text-left">
+              <div className="w-12 h-12 bg-[#5b806d]/10 text-[#5b806d] rounded-2xl flex items-center justify-center">
+                <ICONS.Users className="w-6 h-6" />
               </div>
 
               <div className="flex flex-col">
-                <span className="text-5xl font-black text-slate-900 leading-none">
+                <span className="text-[28px] font-black text-slate-800 leading-none">
                   {loading ? '...' : activeCount}
                 </span>
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2">
+                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">
                   Presentes Agora
                 </p>
               </div>
@@ -102,7 +102,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
             <button
               onClick={() => onNavigateAction('ACTIVE')}
-              className="bg-slate-50 text-slate-500 px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-wider active:scale-95 transition-all border border-slate-200/70"
+              className="bg-slate-50 text-slate-500 px-5 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider active:scale-95 transition-all border border-slate-200/50"
             >
               Ver Lista
             </button>
@@ -110,16 +110,16 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </header>
 
-      <div className="px-6 pt-16 pb-8 space-y-8">
-        <div className="grid grid-cols-2 gap-5">
+      <div className="px-6 pt-14 pb-8 space-y-6">
+        <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => onNavigateAction('NEW')}
-            className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all"
+            className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-3 active:scale-95 transition-all"
           >
-            <div className="w-14 h-14 bg-slate-50 text-[#5b806d] rounded-2xl flex items-center justify-center shrink-0">
-              <ICONS.LogIn className="w-6 h-6" />
+            <div className="w-10 h-10 bg-slate-50 text-[#5b806d] rounded-xl flex items-center justify-center shrink-0">
+              <ICONS.LogIn className="w-5 h-5" />
             </div>
-            <span className="text-base font-bold text-slate-800 leading-tight text-left">
+            <span className="text-xs font-bold text-slate-700 leading-tight text-left">
               Registrar
               <br />
               Entrada
@@ -128,12 +128,12 @@ const Dashboard: React.FC<DashboardProps> = ({
 
           <button
             onClick={() => onNavigateAction('ACTIVE')}
-            className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all"
+            className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-3 active:scale-95 transition-all"
           >
-            <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0">
-              <ICONS.LogOut className="w-6 h-6" />
+            <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center shrink-0">
+              <ICONS.LogOut className="w-5 h-5" />
             </div>
-            <span className="text-base font-bold text-slate-800 leading-tight text-left">
+            <span className="text-xs font-bold text-slate-700 leading-tight text-left">
               Registrar
               <br />
               Saída
@@ -141,67 +141,67 @@ const Dashboard: React.FC<DashboardProps> = ({
           </button>
         </div>
 
-        <div className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-            <h3 className="text-2xl font-black text-slate-900">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+            <h3 className="font-black text-slate-900 text-[18px]">
               Atividade Recente
             </h3>
 
-            <span className="text-[11px] font-black text-[#5b806d] uppercase tracking-[0.2em]">
+            <span className="text-[10px] font-bold text-[#5b806d] uppercase tracking-widest">
               {isFallback ? 'Últimos 6' : 'Hoje'}
             </span>
           </div>
 
           <div className="divide-y divide-slate-50">
             {loading ? (
-              <div className="p-16 text-center text-slate-400 text-base flex flex-col items-center gap-4">
-                <div className="w-10 h-10 border-4 border-[#5b806d] border-t-transparent rounded-full animate-spin"></div>
+              <div className="p-12 text-center text-slate-400 text-sm animate-pulse flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-4 border-[#5b806d] border-t-transparent rounded-full animate-spin"></div>
                 Sincronizando...
               </div>
             ) : displayRecords.length > 0 ? (
               displayRecords.map((record, index) => (
                 <div
                   key={`${record.id}-${index}`}
-                  className="px-6 py-5 flex items-center gap-4 hover:bg-slate-50 transition-colors"
+                  className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors"
                 >
                   <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
                       record.type === 'ENTRY'
                         ? 'bg-emerald-50 text-emerald-600'
                         : 'bg-rose-50 text-rose-600'
                     }`}
                   >
                     {record.type === 'ENTRY' ? (
-                      <ICONS.LogIn className="w-6 h-6" />
+                      <ICONS.LogIn className="w-5 h-5" />
                     ) : (
-                      <ICONS.LogOut className="w-6 h-6" />
+                      <ICONS.LogOut className="w-5 h-5" />
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="font-black text-slate-900 truncate text-xl leading-tight">
+                    <p className="font-black text-slate-900 truncate text-[14px]">
                       {record.partnerName}
                     </p>
-                    <p className="text-[12px] text-slate-400 font-medium truncate uppercase mt-1">
+                    <p className="text-[10px] text-slate-400 font-medium truncate uppercase">
                       {record.company}
                     </p>
                   </div>
 
                   <div className="text-right">
-                    <p className="text-[12px] font-black text-slate-900 leading-tight">
+                    <p className="text-[10px] font-bold text-slate-900 leading-tight">
                       {record.timestamp.toLocaleDateString([], {
                         day: '2-digit',
                         month: '2-digit'
                       })}
                     </p>
-                    <p className="text-lg font-black text-slate-700 leading-tight">
+                    <p className="text-xs font-bold text-slate-600">
                       {record.timestamp.toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
                     </p>
                     <p
-                      className={`text-[12px] font-black uppercase tracking-wider ${
+                      className={`text-[9px] font-bold uppercase tracking-wider ${
                         record.type === 'ENTRY'
                           ? 'text-emerald-500'
                           : 'text-rose-500'
@@ -215,7 +215,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             ) : (
               <div className="p-16 text-center text-slate-400">
                 <svg
-                  className="w-14 h-14 mx-auto mb-4 opacity-20"
+                  className="w-12 h-12 mx-auto mb-3 opacity-20"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -223,11 +223,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={1.5}
+                    strokeWidth={1}
                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <p className="text-base">Nenhum registro encontrado.</p>
+                <p className="text-sm">Nenhum registro encontrado.</p>
               </div>
             )}
           </div>
