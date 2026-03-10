@@ -53,10 +53,7 @@ const App: React.FC = () => {
       setError(null);
     } catch (err) {
       console.error('Erro sincronizando:', err);
-
-      if (!silent) {
-        setError('Erro ao sincronizar dados.');
-      }
+      if (!silent) setError('Erro ao sincronizar dados.');
     } finally {
       if (!silent) setLoading(false);
     }
@@ -126,7 +123,7 @@ const App: React.FC = () => {
       setTimeout(() => {
         setNotifying(null);
         loadData(true);
-      }, 2000);
+      }, 1500);
 
       return true;
     } else {
@@ -204,6 +201,7 @@ const App: React.FC = () => {
   };
 
   const showBottomMenu = view === ViewMode.DASHBOARD;
+  const showInternalHeader = view !== ViewMode.WELCOME && view !== ViewMode.DASHBOARD;
 
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-slate-50 shadow-2xl relative overflow-hidden">
@@ -213,6 +211,64 @@ const App: React.FC = () => {
             {notifying}
           </div>
         </div>
+      )}
+
+      {showInternalHeader && (
+        <header className="relative bg-[#698c78] text-white px-6 py-5 shadow-lg">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setView(ViewMode.DASHBOARD)}
+                className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center active:scale-90 border border-white/10"
+                aria-label="Voltar"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={3}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+
+              <div>
+                <h1 className="text-lg font-black leading-tight tracking-tight">
+                  Portaria Inteligente
+                </h1>
+                <p className="text-[9px] text-emerald-100/70 uppercase font-black tracking-[0.25em] mt-0.5">
+                  Controle de Parceiro
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => loadData()}
+              disabled={loading}
+              className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center active:scale-90 border border-white/10"
+              aria-label="Atualizar"
+            >
+              <svg
+                className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={3}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </button>
+          </div>
+        </header>
       )}
 
       <main
