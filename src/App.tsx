@@ -29,7 +29,6 @@ const App: React.FC = () => {
 
     try {
       const dynamicCompanies = await sheetService.fetchCompanies();
-
       const currentCompanies =
         dynamicCompanies.length > 0 ? dynamicCompanies : INITIAL_COMPANIES;
 
@@ -82,7 +81,6 @@ const App: React.FC = () => {
     type: 'ENTRY' | 'EXIT'
   ) => {
     const normalizedName = partnerName.trim();
-
     const isInside = sheetService.isPartnerInside(records, normalizedName);
 
     if (type === 'ENTRY' && isInside) {
@@ -133,9 +131,7 @@ const App: React.FC = () => {
       return true;
     } else {
       setNotifying('Falha no envio');
-
       setTimeout(() => setNotifying(null), 2000);
-
       return false;
     }
   };
@@ -238,7 +234,7 @@ const App: React.FC = () => {
       {showBottomMenu && (
         <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center p-3 z-20 shadow-2xl rounded-t-[32px]">
           <button
-            onClick={() => setView(ViewMode.DASHBOARD)}
+            onClick={() => setView(ViewMode.WELCOME)}
             className="flex flex-col items-center gap-1 text-[#5b806d]"
           >
             <ICONS.Dashboard className="w-5 h-5" />
