@@ -23,7 +23,9 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --frozen-lockfile || npm install
+        run: |
+          rm -f package-lock.json
+          npm install
 
       - name: Build
         run: npm run build
@@ -39,7 +41,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'dist'
+          path: './dist'
 
   deploy:
     needs: build

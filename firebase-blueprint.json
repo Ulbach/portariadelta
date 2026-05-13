@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "Partner": {
+      "title": "Partner",
+      "description": "Represents a collaborator or partner in the system.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "document": { "type": "string" },
+        "company": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string", "enum": ["Ativo", "Inativo"] },
+        "fixedDiscountHours": { "type": "number", "description": "Deduction for meal hours" }
+      },
+      "required": ["id", "name", "company"]
+    },
+    "AttendanceRecord": {
+      "title": "Attendance Record",
+      "description": "Log of entry or exit for a partner.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "partnerId": { "type": "string" },
+        "partnerName": { "type": "string" },
+        "company": { "type": "string" },
+        "type": { "type": "string", "enum": ["ENTRY", "EXIT"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "partnerName", "company", "type", "timestamp"]
+    },
+    "Company": {
+      "title": "Company",
+      "description": "Stores company metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["Ativa", "Inativa"] }
+      },
+      "required": ["name", "status"]
+    }
+  },
+  "firestore": {
+    "companies": {
+      "schema": "Company",
+      "description": "Collection of companies."
+    },
+    "partners": {
+      "schema": "Partner",
+      "description": "Collection of partners."
+    },
+    "attendance_records": {
+      "schema": "AttendanceRecord",
+      "description": "Collection of attendance logs."
+    }
+  }
+}

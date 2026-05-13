@@ -1,295 +1,186 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Partner, StayReport } from '../types';
 import { ICONS } from '../constants';
+import * as dataUtils from '../services/dataUtils';
 
 interface RegistrationProps {
   partners: Partner[];
   activeReports: StayReport[];
-  onQuickRegister: (partnerName: string, type: 'ENTRY' | 'EXIT') => void | Promise<void>;
+  onRegistered: () => void;
+  onQuickRegister: (name: string, type: 'ENTRY' | 'EXIT') => Promise<boolean>;
   initialTab?: 'NEW' | 'ACTIVE';
-  onBack: () => void;
+  onBack?: () => void;
 }
 
-const Registration: React.FC<RegistrationProps> = ({
-  partners,
-  activeReports,
-  onQuickRegister,
-  initialTab = 'ACTIVE',
-  onBack
-}) => {
+const Registration: React.FC<RegistrationProps> = ({ partners, activeReports, onRegistered, onQuickRegister, initialTab = 'ACTIVE', onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [viewType, setViewType] = useState<'NEW' | 'ACTIVE'>(initialTab);
-  const [selectedCompany, setSelectedCompany] = useState<string>('ALL');
+  const [recentlyExited, setRecentlyExited] = useState<string[]>([]);
 
-  useEffect(() => {
-    setViewType(initialTab);
-  }, [initialTab]);
+  useEffect(() => { setViewType(initialTab); }, [initialTab]);
 
-  const companies = useMemo(() => {
-    const unique = Array.from(
-      new Set(
-        partners
-          .map((p) => (p.company || '').trim())
-          .filter(Boolean)
-      )
-    );
+  const filteredSearch = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (term.length < 2) return [];
 
-    return unique.sort((a, b) => a.localeCompare(b));
-  }, [partners]);
+    const namesInside = activeReports.map(r => dataUtils.normalize(r.partnerName));
 
-  const activeNamesInside = useMemo(() => {
-    return activeReports.map((r) => r.partnerName.trim().toLowerCase());
-  }, [activeReports]);
+    return partners.filter(p => {
+      const isMatch = p.name.toLowerCase().includes(term);
+      const isAlreadyInside = namesInside.includes(dataUtils.normalize(p.name));
+      const isActive = !p.status || p.status.toLowerCase() === 'ativo';
+      return isMatch && !isAlreadyInside && isActive;
+    }).slice(0, 5);
+  }, [partners, searchTerm, activeReports]);
 
-  const filteredNewPartners = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
+  const activeByCompany = useMemo(() => {
+    const grouped: Record<string, StayReport[]> = {};
+    const normalizedExited = recentlyExited.map(name => dataUtils.normalize(name));
 
-    return partners
-      .filter((p) => {
-        const isMatch = p.name.toLowerCase().includes(term);
-        const isAlreadyInside = activeNamesInside.includes(
-          p.name.trim().toLowerCase()
-        );
-        const isActive =
-          p.status?.toString().trim().toLowerCase() === 'ativo';
+    activeReports
+      .filter(r => !normalizedExited.includes(dataUtils.normalize(r.partnerName)))
+      .forEach(r => {
+        if (!grouped[r.company]) grouped[r.company] = [];
+        grouped[r.company].push(r);
+      });
+    return grouped;
+  }, [activeReports, recentlyExited]);
 
-        const matchesCompany =
-          selectedCompany === 'ALL' || p.company === selectedCompany;
-
-        return isMatch && !isAlreadyInside && isActive && matchesCompany;
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .slice(0, 50);
-  }, [partners, searchTerm, activeNamesInside, selectedCompany]);
-
-  const filteredActiveReports = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
-
-    return activeReports
-      .filter((r) => {
-        const matchesSearch = r.partnerName.toLowerCase().includes(term);
-        const matchesCompany =
-          selectedCompany === 'ALL' || r.company === selectedCompany;
-
-        return matchesSearch && matchesCompany;
-      })
-      .sort((a, b) => a.partnerName.localeCompare(b.partnerName));
-  }, [activeReports, searchTerm, selectedCompany]);
-
-  const companyButtons = companies.slice(0, 3);
-
-  const renderCompanyFilters = () => {
-    if (companyButtons.length === 0) return null;
-
-    return (
-      <div className="flex gap-3 overflow-x-auto no-scrollbar">
-        {companyButtons.map((company) => {
-          const isSelected = selectedCompany === company;
-
-          return (
-            <button
-              key={company}
-              onClick={() => setSelectedCompany(company)}
-              className={`min-w-[108px] px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-wide transition-all ${
-                isSelected
-                  ? 'bg-[#698c78] text-white shadow-sm'
-                  : 'bg-white text-slate-500 border border-slate-200'
-              }`}
-            >
-              {company}
-            </button>
-          );
-        })}
-
-        {selectedCompany !== 'ALL' && (
-          <button
-            onClick={() => setSelectedCompany('ALL')}
-            className="min-w-[90px] px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-wide bg-slate-100 text-slate-500"
-          >
-            Todas
-          </button>
-        )}
-      </div>
-    );
-  };
-
-  const renderInitialBadge = (name: string) => {
-    const letter = name?.trim()?.charAt(0)?.toUpperCase() || '?';
-
-    return (
-      <div className="w-10 h-10 rounded-2xl bg-slate-100 text-[#698c78] flex items-center justify-center font-black text-lg shrink-0">
-        {letter}
-      </div>
-    );
+  const handleRegister = (partnerName: string, type: 'ENTRY' | 'EXIT') => {
+    if (type === 'EXIT') setRecentlyExited(prev => [...prev, partnerName]);
+    setSelectedPartner(null);
+    setSearchTerm('');
+    onQuickRegister(partnerName, type).then(ok => {
+      if (ok) onRegistered();
+      else setRecentlyExited(prev => prev.filter(n => n !== partnerName));
+    });
   };
 
   return (
-    <div className="min-h-full bg-slate-100/80 px-6 pt-4 pb-10">
-      <div className="space-y-4">
-        {/* TABS */}
-        <div className="flex bg-white p-1 rounded-2xl border border-slate-100 shadow-sm">
-          <button
-            onClick={() => setViewType('NEW')}
-            className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all ${
-              viewType === 'NEW'
-                ? 'bg-[#698c78] text-white'
-                : 'text-slate-400'
-            }`}
-          >
-            Novos
-          </button>
-
-          <button
-            onClick={() => setViewType('ACTIVE')}
-            className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all ${
-              viewType === 'ACTIVE'
-                ? 'bg-[#698c78] text-white'
-                : 'text-slate-400'
-            }`}
-          >
-            Ativos
-          </button>
-        </div>
-
-        {/* SEARCH */}
-        <div className="relative">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-            <ICONS.Search className="w-5 h-5" />
-          </div>
-          <input
-            type="text"
-            placeholder={
-              viewType === 'NEW'
-                ? 'Buscar colaborador ativo...'
-                : 'Buscar colaborador na planta...'
-            }
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-2xl text-sm text-slate-700 placeholder:text-slate-400 outline-none"
-          />
-        </div>
-
-        {/* COMPANY FILTERS */}
-        {renderCompanyFilters()}
-
-        {/* CONTENT */}
-        {viewType === 'NEW' ? (
-          <div className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <p className="text-[12px] font-black uppercase tracking-[0.15em] text-slate-400">
-                {filteredNewPartners.length} Disponíveis
-              </p>
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {filteredNewPartners.length > 0 ? (
-                filteredNewPartners.map((p) => (
-                  <div
-                    key={p.id}
-                    className="px-6 py-5 flex items-center justify-between gap-4"
-                  >
-                    <div className="flex items-center gap-4 min-w-0">
-                      {renderInitialBadge(p.name)}
-
-                      <div className="min-w-0">
-                        <p className="font-black text-slate-800 text-sm leading-tight truncate">
-                          {p.name}
-                        </p>
-                        <p className="text-[11px] text-slate-400 font-black uppercase tracking-wide mt-1 truncate">
-                          {p.company}
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => onQuickRegister(p.name, 'ENTRY')}
-                      className="w-11 h-11 rounded-2xl bg-slate-50 text-[#698c78] flex items-center justify-center shrink-0 border border-slate-100 active:scale-95 transition-all"
-                      aria-label={`Registrar entrada de ${p.name}`}
-                    >
-                      <ICONS.LogIn className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div className="px-6 py-14 text-center text-slate-400 text-sm">
-                  Nenhum colaborador ativo encontrado.
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <p className="text-[12px] font-black uppercase tracking-[0.15em] text-slate-400">
-                {filteredActiveReports.length} Na Planta
-              </p>
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {filteredActiveReports.length > 0 ? (
-                filteredActiveReports.map((r, index) => (
-                  <div
-                    key={`${r.recordId || r.partnerName}-${index}`}
-                    className="px-6 py-5 flex items-center justify-between gap-4"
-                  >
-                    <div className="flex items-center gap-4 min-w-0">
-                      {renderInitialBadge(r.partnerName)}
-
-                      <div className="min-w-0">
-                        <p className="font-black text-slate-800 text-sm leading-tight truncate">
-                          {r.partnerName}
-                        </p>
-                        <p className="text-[11px] text-slate-400 font-black uppercase tracking-wide mt-1 truncate">
-                          {r.company}
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => onQuickRegister(r.partnerName, 'EXIT')}
-                      className="w-11 h-11 rounded-2xl bg-slate-50 text-rose-600 flex items-center justify-center shrink-0 border border-slate-100 active:scale-95 transition-all"
-                      aria-label={`Registrar saída de ${r.partnerName}`}
-                    >
-                      <ICONS.LogOut className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div className="px-6 py-14 text-center text-slate-400 text-sm">
-                  Nenhum colaborador na planta.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* BACK BUTTON */}
-        <div className="pt-6">
-          <button
-            onClick={onBack}
-            className="w-full bg-[#698c78] text-white py-5 rounded-[24px] shadow-xl text-[13px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            <span>Voltar ao Início</span>
-          </button>
-        </div>
-
-        {/* SIGNATURE */}
-        <div className="pt-8 flex justify-center items-center opacity-30 select-none">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">
-            - BY ULBACH -
-          </p>
-        </div>
+    <div className="space-y-6 animate-fade-in pb-8">
+      <div className="flex bg-slate-100 p-1 rounded-2xl mx-2 shadow-inner">
+        <button 
+          onClick={() => setViewType('ACTIVE')}
+          className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${viewType === 'ACTIVE' ? 'bg-white text-[#5b806d] shadow-sm' : 'text-slate-400'}`}
+        >
+          QUEM ESTÁ NA PLANTA?
+        </button>
+        <button 
+          onClick={() => setViewType('NEW')}
+          className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${viewType === 'NEW' ? 'bg-white text-[#5b806d] shadow-sm' : 'text-slate-400'}`}
+        >
+          NOVA ENTRADA
+        </button>
       </div>
+
+      {viewType === 'NEW' ? (
+        <div className="space-y-6 px-2">
+          <div className="relative">
+            <ICONS.Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Buscar colaborador ativo..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setSelectedPartner(null); }}
+              className="w-full bg-white border border-slate-200 rounded-3xl py-4 pl-12 pr-4 text-base font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-[#5b806d]/20"
+              autoFocus
+            />
+          </div>
+
+          {!selectedPartner && searchTerm.trim().length >= 2 && (
+            <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl overflow-hidden divide-y divide-slate-50">
+              {filteredSearch.map(p => (
+                <button 
+                  key={p.id}
+                  onClick={() => setSelectedPartner(p)}
+                  className="w-full p-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                >
+                  <div className="text-left">
+                    <p className="font-bold text-slate-800 uppercase tracking-tight">{p.name}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{p.company}</p>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-slate-50 text-[#5b806d] flex items-center justify-center">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                  </div>
+                </button>
+              ))}
+              {filteredSearch.length === 0 && (
+                <div className="p-12 text-center text-slate-400 italic text-sm">Nenhum colaborador ativo disponível.</div>
+              )}
+            </div>
+          )}
+
+          {selectedPartner && (
+            <div className="bg-white p-6 rounded-[42px] border-2 border-[#5b806d] shadow-2xl space-y-6 animate-in zoom-in-95 mx-2">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-[24px] bg-slate-50 text-[#5b806d] flex items-center justify-center font-bold text-2xl border border-slate-100">
+                  {selectedPartner.name.charAt(0)}
+                </div>
+                <div className="text-left">
+                  <h4 className="text-xl font-bold text-slate-800 uppercase leading-tight tracking-tight">{selectedPartner.name}</h4>
+                  <p className="text-xs font-bold text-[#5b806d] uppercase tracking-[0.2em]">{selectedPartner.company}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleRegister(selectedPartner.name, 'ENTRY')}
+                className="w-full bg-[#5b806d] text-white rounded-[24px] py-5 font-bold shadow-lg shadow-[#5b806d]/20 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all"
+              >
+                <ICONS.LogIn className="w-6 h-6" />
+                <span className="text-[10px] tracking-[0.3em] font-black">REGISTRAR ENTRADA</span>
+              </button>
+              <button onClick={() => setSelectedPartner(null)} className="w-full text-slate-300 text-[10px] font-black uppercase tracking-[0.25em] py-2">Cancelar</button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-6 px-2">
+          {Object.entries(activeByCompany).length > 0 ? (Object.entries(activeByCompany) as [string, StayReport[]][]).map(([company, reports]) => (
+            <div key={company} className="space-y-3">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-4 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#5b806d] animate-pulse"></div>
+                {company} <span className="text-slate-200 ml-1">({reports.length})</span>
+              </h3>
+              <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm divide-y divide-slate-50">
+                {reports.map((report, idx) => (
+                  <div key={idx} className="p-5 flex items-center justify-between">
+                    <div className="text-left">
+                      <p className="font-bold text-slate-700 text-sm uppercase tracking-tight leading-none">{report.partnerName}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">Entrada: {report.entryTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                    <button 
+                      onClick={() => handleRegister(report.partnerName, 'EXIT')}
+                      className="bg-rose-50 text-rose-600 px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider hover:bg-rose-100 transition-colors active:scale-90"
+                    >
+                      SAÍDA
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )) : (
+            <div className="p-20 text-center space-y-3">
+              <div className="w-16 h-16 bg-slate-100 text-slate-300 rounded-full flex items-center justify-center mx-auto opacity-20">
+                <ICONS.Users className="w-8 h-8" />
+              </div>
+              <p className="text-slate-400 text-sm font-medium">Ninguém na planta no momento.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {onBack && (
+        <div className="px-2 pt-6">
+          <button 
+            onClick={onBack}
+            className="w-full py-5 bg-[#5b806d] text-white shadow-lg shadow-[#5b806d]/20 font-black text-[10px] uppercase tracking-[0.3em] rounded-3xl active:scale-95 transition-all flex items-center justify-center gap-3"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7 7-7" /></svg>
+            Voltar ao Início
+          </button>
+        </div>
+      )}
     </div>
   );
 };

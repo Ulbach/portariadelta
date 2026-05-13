@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 1. Companies
+    match /companies/{companyId} {
+      function isValidCompany(data) {
+        return data.name is string && data.name.size() <= 100 &&
+               data.status in ['Ativa', 'Inativa'];
+      }
+      
+      // Allow read for authenticated users
+      allow list: if isVerified();
+      allow get: if isVerified() && isValidId(companyId);
+      
+      // Allow create/update for verified users
+      allow create: if isVerified() && isValidCompany(incoming());
+      allow update: if isVerified() && isValidCompany(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'status'])
+      );
+    }
+
+    // 2. Partners
+    match /partners/{partnerId} {
+      function isValidPartner(data) {
+        return data.name is string && data.name.size() <= 100 &&
+               data.company is string && data.company.size() <= 100 &&
+               (data.role == null || (data.role is string && data.role.size() <= 100)) &&
+               (data.document == null || (data.document is string && data.document.size() <= 50)) &&
+               (data.status == null || data.status in ['Ativo', 'Inativo']) &&
+               (data.fixedDiscountHours == null || data.fixedDiscountHours is number);
+      }
+
+      allow list: if isVerified();
+      allow get: if isVerified() && isValidId(partnerId);
+
+      allow create: if isVerified() && isValidPartner(incoming());
+      allow update: if isVerified() && isValidPartner(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'role', 'document', 'company', 'status', 'fixedDiscountHours'])
+      );
+      allow delete: if isVerified();
+    }
+
+    // 3. Attendance Records
+    match /attendance_records/{recordId} {
+      function isValidRecord(data) {
+        return data.partnerName is string && data.partnerName.size() <= 100 &&
+               data.company is string && data.company.size() <= 100 &&
+               data.type in ['ENTRY', 'EXIT'] &&
+               data.timestamp is timestamp;
+      }
+
+      allow list: if isVerified();
+      allow get: if isVerified() && isValidId(recordId);
+
+      allow create: if isVerified() && isValidRecord(incoming());
+      // Usually, records are immutable entries, but we allow delete if needed for clearing
+      allow delete: if isVerified();
+    }
+  }
+}

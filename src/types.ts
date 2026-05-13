@@ -1,10 +1,12 @@
+
 export interface Partner {
   id: string;
   name: string;
   document: string;
   company: string;
   role?: string;
-  status?: 'Ativo' | 'Inativo' | string;
+  status?: 'Ativo' | 'Inativo';
+  fixedDiscountHours?: number; // DescFixo in hours
 }
 
 export interface AttendanceRecord {
@@ -40,6 +42,7 @@ export interface CompanyReport {
   period: string; // "DD/MM/YYYY" or "MM/YYYY"
   partners: {
     name: string;
+    fixedDiscountHours?: number;
     days: {
       date: string;
       sessions: { entry: Date; exit?: Date; duration: number }[];
@@ -49,10 +52,17 @@ export interface CompanyReport {
   }[];
 }
 
+export interface Company {
+  id: string;
+  name: string;
+  status: 'Ativa' | 'Inativa';
+}
+
 export enum ViewMode {
   WELCOME = 'WELCOME',
   DASHBOARD = 'DASHBOARD',
   PARTNERS = 'PARTNERS',
+  COMPANIES = 'COMPANIES',
   REPORTS = 'REPORTS',
   REGISTRATION = 'REGISTRATION',
   RECORDS = 'RECORDS'

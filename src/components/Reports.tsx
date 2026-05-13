@@ -1,22 +1,23 @@
 
 import React, { useState, useMemo } from 'react';
-import { AttendanceRecord, CompanyReport } from '../types';
-import * as sheetService from '../services/sheetService';
+import { AttendanceRecord, CompanyReport, Partner } from '../types';
+import * as dataUtils from '../services/dataUtils';
 
 interface ReportsProps {
   records: AttendanceRecord[];
+  partners: Partner[];
   loading: boolean;
   onBack?: () => void;
 }
 
-const Reports: React.FC<ReportsProps> = ({ records, loading, onBack }) => {
+const Reports: React.FC<ReportsProps> = ({ records, partners, loading, onBack }) => {
   const [reportType, setReportType] = useState<'DAILY' | 'MONTHLY'>('DAILY');
   const [selectedCompany, setSelectedCompany] = useState<string>('TODAS');
   const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
 
   const companyReports = useMemo(() => 
-    sheetService.generateCompanyReports(records, reportType), 
-    [records, reportType]
+    dataUtils.generateCompanyReports(records, reportType, partners), 
+    [records, reportType, partners]
   );
 
   const companies = useMemo(() => {
@@ -132,7 +133,14 @@ const Reports: React.FC<ReportsProps> = ({ records, loading, onBack }) => {
                                   {partner.days.map((day, dIdx) => (
                                     <div key={dIdx} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
                                       <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                                        <span className="text-[10px] font-black text-slate-800">{day.date}</span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-[10px] font-black text-slate-800">{day.date}</span>
+                                          {partner.fixedDiscountHours && partner.fixedDiscountHours > 0 && (
+                                            <span className="text-[8px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded uppercase font-bold">
+                                              -{partner.fixedDiscountHours}h Refeição
+                                            </span>
+                                          )}
+                                        </div>
                                         <span className="text-[9px] font-bold text-[#5b806d] uppercase">{formatTime(day.totalWork)}</span>
                                       </div>
                                       <div className="space-y-2">

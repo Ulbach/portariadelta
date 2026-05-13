@@ -1,64 +1,78 @@
-import React from 'react';
+
+import React, { useState } from 'react';
+import { ICONS } from '../constants';
+import * as firebaseService from '../services/firebaseService';
 
 interface WelcomeProps {
   onStart: () => void;
 }
 
 const Welcome: React.FC<WelcomeProps> = ({ onStart }) => {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-between bg-slate-100/80 px-8 py-14">
-      <div className="flex-1 flex flex-col items-center justify-center w-full">
-        <div className="w-28 h-28 rounded-[34px] bg-[#698c78] shadow-[0_0_0_10px_rgba(105,140,120,0.12)] flex items-center justify-center mb-8">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-14 h-14 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.8}
-          >
-            <rect x="3" y="3" width="7" height="7" rx="1.5" />
-            <rect x="14" y="3" width="7" height="5" rx="1.5" />
-            <rect x="3" y="14" width="7" height="5" rx="1.5" />
-            <rect x="14" y="11" width="7" height="8" rx="1.5" />
-          </svg>
-        </div>
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
-        <div className="text-center mb-12">
-          <h1 className="text-[34px] leading-[1] font-black text-slate-900">
-            Portaria
+  const handleSignIn = async () => {
+    setIsSigningIn(true);
+    const user = await firebaseService.signInWithGoogle();
+    setIsSigningIn(false);
+    if (user) {
+      onStart();
+    } else {
+      alert('Falha ao autenticar. Tente novamente.');
+    }
+  };
+
+  return (
+    <div className="min-h-full flex flex-col items-center justify-between py-12 px-6 text-center animate-fade-in">
+      {/* Cabeçalho / Logo Area */}
+      <div className="space-y-6 mt-6">
+        <div className="relative w-32 h-32 mx-auto">
+          <div className="absolute inset-0 bg-[#5b806d] rounded-[40px] rotate-6 opacity-20 animate-pulse"></div>
+          <div className="absolute inset-0 bg-white rounded-[40px] shadow-2xl overflow-hidden border-4 border-white flex items-center justify-center p-4">
+            <img 
+              src="https://raw.githubusercontent.com/ulbach/portaria-inteligente/main/public/logo-delta.png" 
+              alt="Delta Logo"
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                // Fallback if the URL above doesn't work yet
+                e.currentTarget.src = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=400&h=400&auto=format&fit=crop";
+                e.currentTarget.className = "w-full h-full object-cover grayscale brightness-90";
+              }}
+            />
+          </div>
+          <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-[#5b806d] rounded-2xl flex items-center justify-center shadow-lg text-white border-4 border-white">
+            <ICONS.Dashboard className="w-6 h-6" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none">
+            Portaria<br/>
+            <span className="text-[#5b806d]">Inteligente</span>
           </h1>
-          <h2 className="text-[34px] leading-[1] font-black text-[#698c78] mt-1">
-            Inteligente
-          </h2>
-          <p className="mt-4 text-[11px] tracking-[0.45em] font-black text-slate-400 uppercase">
-            # Delta Geração #
+          <p className="text-[10px] text-slate-400 uppercase font-black tracking-[0.4em]">
+            # DELTA GERAÇÃO #
           </p>
         </div>
+      </div>
 
-        <button
-          onClick={onStart}
-          className="w-full max-w-sm bg-[#698c78] text-white py-5 rounded-[24px] shadow-xl text-base font-black uppercase tracking-wider flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+      {/* Botões Centrais */}
+      <div className="w-full max-w-xs mx-auto mt-12">
+        <button 
+          onClick={handleSignIn}
+          disabled={isSigningIn}
+          className="w-full bg-gradient-to-br from-[#5b806d] to-[#436152] text-white py-6 rounded-[32px] font-black text-xs uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(91,128,109,0.25)] active:scale-95 transition-all flex items-center justify-center gap-4 group disabled:opacity-50"
         >
-          <span>Acesso de Parceiros</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-5 h-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={3}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
-          </svg>
+          <span>{isSigningIn ? 'Autenticando...' : 'Acessar Sistema'}</span>
+          <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center group-hover:translate-x-1 transition-transform">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </div>
         </button>
       </div>
 
-      <div className="pt-8 flex justify-center items-center opacity-30 select-none">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">
-          - BY ULBACH -
-        </p>
-      </div>
+      {/* Espaçador para manter o layout flex-col justify-between */}
+      <div className="h-20"></div>
     </div>
   );
 };
