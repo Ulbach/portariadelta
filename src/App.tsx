@@ -34,6 +34,9 @@ const App: React.FC = () => {
       }
       console.log('[App] Loading data from Firebase...');
       
+      // Ensure initial data exists
+      await firebaseService.seedInitialDataIfEmpty();
+      
       // Companies
       let dynamicCompanies: Company[] = [];
       try {
